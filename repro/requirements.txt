@@ -1,0 +1,14 @@
+sqlalchemy
+psycopg2-binary
+matplotlib
+pandas
+geopandas
+numpy
+seaborn
+shapely
+scipy
+wordcloud
+earthpy
+rasterio
+contextily
+setuptools<70.0.0

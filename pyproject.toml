@@ -1,0 +1,10 @@
+[project]
+name = "agile-2026-paper-033-repro"
+version = "0.1.0"
+description = "Reproducibility review orchestration scripts for Paper 033"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+managed = true

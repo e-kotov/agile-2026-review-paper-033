@@ -1,0 +1,65 @@
+Bootstrap: docker
+From: postgis/postgis:16-3.4
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update && apt-get install -y --no-install-recommends \
+        postgresql-16-pgrouting \
+        osm2pgsql \
+        osm2pgrouting \
+        postgresql-contrib \
+        postgis \
+        python3-pip \
+        python3-venv \
+        python3-dev \
+        libpq-dev \
+        gdal-bin \
+        curl \
+        ca-certificates \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    # Install uv for Python package management
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+
+    # Pre-install core requirements for Graz pipeline
+    # Use uv for system-wide install inside container
+    uv pip install --system --no-cache \
+        sqlalchemy \
+        psycopg2-binary \
+        matplotlib \
+        pandas \
+        geopandas \
+        numpy \
+        seaborn \
+        shapely \
+        scipy \
+        wordcloud \
+        earthpy \
+        rasterio \
+        contextily \
+        mapclassify \
+        rtree \
+        pyogrio \
+        geoalchemy2 \
+        "setuptools<70.0.0" \
+        jupyter \
+        nbconvert
+
+%environment
+    export PGHOST=localhost
+    export PGPORT=5432
+    export PGUSER=postgres
+    export PGPASSWORD=admin
+    export PGDATABASE=OSM
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%runscript
+    # For Apptainer, we MUST start the database manually in-session
+    # because there is no background service manager.
+    /work/repro-reviews/paper-033/scripts/entrypoint.sh "$@"
+
+%help
+    Apptainer definition for paper-033 reproduction.
+    Synced with Dockerfile (PostgreSQL 16 + PostGIS + pgRouting + Python 3.12 stack).

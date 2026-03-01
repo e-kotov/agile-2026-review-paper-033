@@ -1,0 +1,20 @@
+# Management files
+logs/
+pgdata/
+*.sif
+*.tar.gz
+*.zip
+*.pdf
+
+# Author artifacts (inside repro subfolder)
+repro/DATA/
+repro/.venv/
+repro/.ipynb_checkpoints/
+repro/executed_*.ipynb
+repro/*.png
+
+# IDE junk
+.DS_Store
+.vscode/
+.idea/
+*.pkl

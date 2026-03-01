@@ -1,0 +1,438 @@
+---
+title: "Reproducibility review of: OpenStreetMap Suitability Analysis for Wheelchair Routing"
+author: "Egor Kotov \\orcid{0000-0001-6690-5345}"
+date: "2026-03-08"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    papersize: a4
+    header-includes: |
+      \usepackage{needspace}
+      \usepackage{scalerel}
+      \usepackage{tikz}
+      \usetikzlibrary{svg.path}
+      \definecolor{orcidlogocol}{HTML}{A6CE39}
+      \tikzset{
+        orcidlogo/.pic={
+          \fill[orcidlogocol] svg{M256,128c0,70.7-57.3,128-128,128C57.3,256,0,198.7,0,128C0,57.3,57.3,0,128,0C198.7,0,256,57.3,256,128z};
+          \fill[white] svg{M86.3,186.2H70.9V79.1h15.4v48.4V186.2z}
+                       svg{M108.9,79.1h41.6c39.6,0,57,28.3,57,53.6c0,27.5-21.5,53.6-56.8,53.6h-41.8V79.1z     M124.3,172.4h24.5c34.9,0,42.9-26.5,42.9-39.7c0-21.5-13.7-39.7-43.7-39.7h-23.7V172.4z}
+                       svg{M88.7,56.8c0,5.5-4.5,10.1-10.1,10.1c-5.6,0-10.1-4.6-10.1-10.1c0-5.6,4.5-10.1,10.1-10.1C84.2,46.7,88.7,51.3,88.7,56.8z};
+        }
+      }
+      \newcommand\orcid[1]{\href{https://orcid.org/#1}{\raisebox{0.15 em}{\mbox{\scalerel*{
+      \begin{tikzpicture}[yscale=-1, transform shape]
+      \pic{orcidlogo};
+      \end{tikzpicture}
+      }{|}}}}}
+      \definecolor{agileblue}{RGB}{0,77,155}
+---
+
+![](https://reproducible-agile.github.io/public/images/reproducible-AGILE-logo-square.pdf){width="30%" fig-align="center" fig-pos="H"}
+
+
+This report is part of the reproducibility review at the AGILE conference.
+For more information see [https://reproducible-agile.github.io/](https://reproducible-agile.github.io/).
+This document is published on OSF at *#TODO: OSF LINK HERE*. 
+To cite the report use *#TODO: ADD CITATION*
+
+# Reviewed paper
+
+Majic I., Gegenleithner T., Scholz J. (2026). OpenStreetMap Suitability Analysis for Wheelchair Routing. AGILE GIScience Series. *#TODO: UPDATE CITATION WHEN THE PAPER IS PUBLISHED*
+
+# Summary
+
+The reproduction study is currently limited to Graz-only pipeline, including database setup and analysis notebooks 01 to 03. Notebook 04 (City Comparison) is excluded from the initial review due to missing comparison assets for Linz and Salzburg in the current repository.
+
+- **Result of the reproduction**: Some figures were reproduced.
+- **Main outcome**: Successful database initialization and execution of core analysis notebooks for Graz.
+
+\clearpage
+
+# Reproducibility reviewer notes
+
+## Scope
+The review covers the full recomputation of the main Graz pipeline as described in the paper's `README.md`. 
+
+The following items were explicitly marked as out of scope for the initial review:
+- `04_city_comparison.ipynb`: Excluded because the repository lacks the Linz comparison assets required by the workflow.
+
+## Technical Details {#sec-tech-details}
+Reproduction was performed using a single Apptainer/Docker container containing:
+- PostgreSQL 16 + PostGIS + pgRouting
+- osm2pgsql + osm2pgrouting
+- Python 3.12 with geospatial stack (geopandas, rasterio, etc.)
+
+### Host Environment Requirements
+The host-side orchestration scripts (e.g., data acquisition, table extraction) require a standard **Python 3** installation. These scripts rely exclusively on the Python standard library; no external Python packages are required on the host system. The project metadata and Python version requirements are formally defined in the included **`pyproject.toml`** file. 
+
+Execution of the reproduction pipeline requires either **Docker** or **Apptainer** (formerly Singularity) to run the containerized environment. For report generation, **Quarto** must be installed on the host. 
+
+For efficient management of Python environments and tools, the use of [`uv`](https://docs.astral.sh/uv/) is recommended, though not strictly required. For example, host scripts can be executed seamlessly using `uv run <script_name>.py`.
+
+### Container Image Build and Distribution
+The Docker image was built for the `linux/amd64` platform and pushed to Docker Hub for public access.
+
+```bash
+# Build the image locally for amd64 platform (from repo root)
+docker build --platform linux/amd64 -t paper-033 -f containers/Dockerfile .
+
+# Tag and push to Docker Hub
+docker tag paper-033 \
+  egorkotovdhub/agile-2026-paper-033:latest
+docker push egorkotovdhub/agile-2026-paper-033:latest
+```
+
+### HPC/Apptainer Execution
+Due to `fakeroot` limitations on standard HPC clusters, local Apptainer builds with `%post` modifications are unsupported. Instead, reviewers should pull the pre-built image directly from Docker Hub:
+
+```bash
+# Pull the pre-built image
+module load apptainer
+apptainer pull --force \
+  repro-reviews/paper-033/containers/paper_033.sif \
+  docker://egorkotovdhub/agile-2026-paper-033:latest
+```
+
+The container's `entrypoint.sh` is specifically configured to allow local database connections without a password (`trust` authentication) and uses `/tmp` for the PostgreSQL socket to avoid "read-only file system" errors when running within restrictive Apptainer bind mounts. Ensure `PGDATA` is exported to a local directory (e.g., `/work/repro-reviews/paper-033/pgdata`) when executing the container to avoid HPC temporary space limits.
+
+## Execution Steps
+
+The reproduction process is automated through a series of scripts. The chronological steps to replicate the results are as follows:
+
+### Data Acquisition
+The dataset must be downloaded from Figshare before running the pipeline. This is automated via a helper script:
+
+```bash
+./scripts/download_data.sh 31333180 repro/DATA
+```
+
+### Build or Pull the Container Image
+The environment is defined in `containers/Dockerfile` and `containers/apptainer.def` (which are kept in sync). To build the image locally using Docker or pull the pre-built image using Apptainer:
+
+```bash
+./scripts/build.sh
+```
+
+Alternatively, to build the Apptainer `.sif` image locally from the definition file (requires `fakeroot` or root privileges):
+
+```bash
+./scripts/build.sh --local
+```
+
+On HPC systems where local builds are restricted, the pre-built image can be pulled directly from Docker Hub as described in the [Technical Details](#sec-tech-details) section.
+
+### Execute the Reproduction Pipeline
+The pipeline initializes the database, imports the data, and executes the analysis notebooks. This is handled by an internal script (`scripts/internal_repro.sh`) which is executed automatically inside the container by the following host-side wrapper scripts:
+
+**Via SLURM:**
+```bash
+sbatch slurm/run_repro.slurm
+```
+
+**Locally (Docker/Apptainer):**
+```bash
+./scripts/run.sh
+```
+
+### Extract Tables, Generate Patch Set, and Render Report
+Once the pipeline completes, the results are extracted, all surgical changes are consolidated into a patch file, and the final report is rendered.
+
+```bash
+# Extract LaTeX tables from executed notebooks
+python3 scripts/extract_tables.py
+
+# Generate the reproducibility patch set
+./scripts/generate_repro_patchset.sh
+
+# Render the final Quarto report
+cd report && quarto render report.qmd
+```
+
+## Resource Utilization and Runtime
+
+The reproduction study was conducted on a Scientific Compute Cluster (SCC) using SLURM for resource management. The following resources were utilized for the full Graz pipeline (Job ID 12848048):
+
+- **CPUs**: 2 allocated (Peak utilization varied by notebook cell).
+- **Memory**: 8 GB requested, 6.35 GB peak resident set size (MaxRSS) utilized (~79% efficiency).
+- **Wall Clock Time**: 25 minutes and 23 seconds.
+- **Total Consumption**: ~0.85 core-hours.
+
+
+\clearpage
+# Reproduction Efforts
+
+During the reproduction study, the following issues were identified in the authors' reproducibility package:
+
+## 1. Missing Auxiliary Data (`innerenbezirke`) {#effort-1}
+The `setup.sql` script references a table named `innerenbezirke` to create a clipped visualization of the Graz street network. This dataset is not provided in the Figshare package. The reproduction script was patched to skip this non-essential visualization step.
+
+## 2. Missing Comparison OSM Data {#effort-2}
+While the paper compares Graz with Linz and Salzburg (Section 6), the OSM extracts for Linz and Salzburg are missing from the data package.
+
+## 3. Dependency Omission {#effort-3}
+The documentation omitted the `postgis` system package (required for `raster2pgsql`). Additionally, several Python dependencies required for analysis and visualization were missing from `requirements.txt`:
+- `mapclassify` (required for thematic mapping in `01_data_exploration.ipynb`)
+- `rtree` (required for spatial performance and spatial joins)
+- `pyogrio` (recommended for faster GeoPackage reading)
+- `geoalchemy2` (required for `to_postgis()` in `03_routing_analysis.ipynb`)
+
+## 4. Code Rot (Library Compatibility) {#effort-4}
+The author's `requirements.txt` did not specify library versions. Consequently, changes in the Matplotlib API (v3.4+) caused an `AttributeError` when accessing `ax._get_lines.prop_cycler` in `02_route_profiles.ipynb`. The notebook was patched to use a version-agnostic method for color cycle retrieval.
+
+## 5. Edge Case Handling (Numerical stability) {#effort-5}
+In `02_route_profiles.ipynb`, the Savitzky-Golay filter (`savgol_filter`) was applied with a fixed window length of 5. For very short route segments (fewer than 5 points), this caused a `ValueError`. The notebook was patched to conditionally apply the filter only when sufficient data points are present.
+
+## 6. Data Robustness (Empty Dataframes) {#effort-6}
+In `02_route_profiles.ipynb`, the `profiles` function did not handle empty input dataframes, leading to a `ValueError` when setting plot limits. This occurred during reproduction likely due to subtle differences in database state or spatial join outcomes. The function was patched to return early with a warning if the input dataframe is empty.
+
+## 7. Map Projection and Logic Errors (Experiment 2) {#effort-7}
+The code for generating `experiment2_Park.png` in `02_route_profiles.ipynb` contains multiple technical flaws that prevent an accurate reproduction of the original paper's figure. Specifically:
+- **CRS Mismatch**: The buildings layer is explicitly transformed to EPSG:4326, while the routes and street networks are plotted in their native database projection (EPSG:3857), causing severe map distortion.
+- **Code Overwriting**: Several cells for Experiment 2 were partially overwritten with hardcoded node IDs and bounding box parameters from Experiment 1 (e.g., using IDs `1051` and `28162` instead of the correct `54022` and `3322`).
+
+## 8. Non-Deterministic Route Generation (Experiment 3) {#effort-8}
+In `03_routing_analysis.ipynb`, the 1000 route combinations for the performance test are generated dynamically from the database using a `LIMIT` clause on spatial queries without an explicit `ORDER BY` or random seed. Because the input OSM data import can result in slight variations in node ordering or availability, the specific pairs of sources and targets differ from the original study.
+
+## 9. Data-Driven Bar Ordering (Figure 23) {#effort-9}
+The code for Figure 23 (`surface_performance.png`) deterministicly sorts the horizontal bars based on the percentage of the "Wheelchair Network." Because the reproduced data distribution differs slightly from the original study (likely due to the stochastic route selection in Experiment 3), the resulting order of surface types in the chart is different from the paper, although the individual values are consistent.
+
+## 10. Redundant Calculation Logic {#effort-10}
+In `02_route_profiles.ipynb`, the SQL query for route profiles multiplied the `slope` values (already stored as percentages in the database) by a factor of 100. This resulted in an incorrect threshold classification (e.g., a 3% slope was interpreted as 300%), causing elevation profiles to be incorrectly colored as "Red" (> 6%) instead of "Green." The redundant multiplication was removed.
+
+## 11. X-Axis Label Overlap (Figure 9b) {#effort-11}
+In `01_data_exploration.ipynb`, the code for the slope histogram (Figure 9b) used a very small tick interval (0.5%) for the x-axis. Due to the range of the data, this caused the numeric labels to overlap and become illegible in the rendered PDF. The axis was patched to use explicit breaks at **1, 3, 5, 7, 9, 11, 13, 15** to ensure clarity while maintaining a precise scale.
+
+## 12. Computational Inconsistency (Figure 9b) {#effort-12}
+The reproduction of Figure 9b followed the authors' provided notebook logic exactly. However, this logic is internally inconsistent: it visually filters the histogram to exclude outliers (using a custom IQR function) but calculates the reported mean (5.32%) using the entire dataset including extreme values. This results in a vertical mean line that sits outside the primary distribution shown in the plot. While this differs significantly from the 3.33% mean reported in the paper text, the reproduction maintains the authors' original code to accurately reflect the state of the reproducibility package.
+
+### Summary of Surgical Edits (Patches)
+
+To achieve successful execution, surgical edits were applied strictly to the following files:
+
+*   **`setup.sql`**:
+    *   Commented out references to the missing `innerenbezirke` table.
+    *   Restored the `graz_sidewalk_unique` table definition (originally part of a skipped comparison block).
+    *   Commented out the city comparison section (Linz/Salzburg) due to missing data.
+*   **`01_data_exploration.ipynb`**:
+    *   Adjusted x-axis ticks for the slope histogram (Figure 9b) to explicit breaks (1, 3, 5, 7, 9, 11, 13, 15) to resolve overlapping labels.
+*   **`02_route_profiles.ipynb`**:
+    *   Added empty dataframe validation in the `profiles` function.
+    *   Implemented numerical stability checks (minimum array length) for the `savgol_filter`.
+    *   Updated deprecated Matplotlib color cycler code to maintain compatibility with modern API versions.
+    *   Removed redundant `* 100` multiplication in the slope calculation SQL query.
+*   **`03_routing_analysis.ipynb`**:
+    *   Removed redundant `* 100` multiplication in the `count_test` SQL query.
+
+All surgical changes made to the author's original files are documented and consolidated in the **`repro_patches.diff`** file located in the root of the reproduction repository. This file serves as a transparent record of the modifications required to achieve a successful execution of the Graz pipeline.
+
+\needspace{5\baselineskip}
+## Recommendations for Future Reproducibility
+
+Based on the efforts required to reproduce this computational pipeline, several recommendations are offered to the authors to enhance the robustness and portability of the work:
+
+1.  **Explicit Dependency Management**: The provided `requirements.txt` lacked version pinning. Over time, APIs change (e.g., Matplotlib's `prop_cycler`), which leads to "code rot." Furthermore, several implicit dependencies (like `mapclassify`, `rtree`, `pyogrio`, and `geoalchemy2`) were missing entirely. 
+    *   *Recommendation*: Utilize a modern environment lockfile manager (such as [`uv`](https://docs.astral.sh/uv/) or [`pixi`](https://pixi.prefix.dev/)) that captures exact versions of both direct and transitive dependencies. This reproduction effort used `uv` for fast, reproducible system-wide installation of dependencies.
+2.  **Containerization of System Dependencies**: The pipeline relies heavily on specific versions of PostgreSQL, PostGIS, pgRouting, and `osm2pgrouting`. Installing and configuring these correctly across different operating systems can be an immense barrier for reviewers. 
+    *   *Recommendation*: Provide a `Dockerfile` (or an `Apptainer`/`Singularity` definition) alongside the code. This explicitly documents the required OS environment and ensures reviewers can immediately instantiate a working database without complex local configurations.
+3.  **Defensive Programming Practices**: Data-driven pipelines often encounter edge cases (e.g., resulting spatial queries returning empty datasets, or route segments having too few coordinates). 
+    *   *Recommendation*: Implement edge-case handling in analysis functions. For example, explicitly check if a dataframe is empty before attempting to plot it, or ensure an array meets the minimum length requirement before applying sliding window filters like `savgol_filter`.
+4.  **Complete Artifact Repositories**: The reproduction was partially blocked by missing data (`innerenbezirke` shapefile and the Linz/Salzburg OSM extracts). 
+    *   *Recommendation*: Ensure that *all* data required to execute the scripts top-to-bottom are included in the published artifact (e.g., on Figshare). If secondary data is too large or restricted, gracefully isolate those analysis steps into optional modules or clearly demarcated, skippable scripts that do not break the main execution flow.
+5.  **Robust Stochastic Sampling**: In Experiment 3, the selection of 1000 route pairs relied on a `LIMIT` clause without an explicit `ORDER BY`, leading to results dictated by the database's internal storage order. While `ORDER BY RANDOM()` combined with `SET SEED` is a possible fix in PostgreSQL, it can be performance-intensive and session-dependent.
+    *   *Recommendation*: For better reproducibility, stochastic sampling should be performed using one of the following methods:
+        a. **Python-side Sampling**: Fetch the entire set of candidate nodes using a deterministic sort (e.g., `ORDER BY gid`) and perform the sampling in Python using `pandas.sample(n=1000, random_state=<seed>)`.
+        b. **Deterministic SQL Hashing**: Select rows based on a deterministic hash of a unique identifier (e.g., `WHERE mod(hashtext(gid::text), 100) < 5`).
+        c. **Artifact Provision**: The most robust method is to include the specific list of sampled IDs (source and target nodes) as a static CSV/JSON file in the reproducibility package.
+
+\needspace{5\baselineskip}
+# Acknowledgements
+
+This work used the Scientific Compute Cluster at GWDG, the joint data center of Max Planck Society for the Advancement of Science (MPG) and University of Göttingen. In part funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – 405797229
+
+\clearpage
+
+# Reproduced Figures
+
+
+This section presents the results of the reproduction for each figure in the original paper. Reproduced images are set to a medium size (approximately half an A4 page). Figures with discrepancies are cross-referenced to the "Reproduction Efforts" section.
+
+Note: Figures 24-28 (City Comparison) were skipped due to missing auxiliary data for Linz and Salzburg.
+
+## Data Exploration (Notebook 01)
+
+### Figure 1
+*Not reproducible (Conceptual schematic of wheelchair requirements).*
+
+### Figure 2
+*Not reproducible (Chord diagram of tag combinations; likely generated using external software).*
+
+### Figure 3: Types of roads (key highway)
+![](../repro/highway1.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 4a: Sidewalk mapping (sidewalk=*)
+![](../repro/sidewalk_py.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 4b: Sidewalk mapping (footway=sidewalk)
+![](../repro/hwfwfwsw_py.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 5
+*Not reproducible (Conceptual diagram of sidewalk mapping approaches).*
+
+### Figure 6: Surface per road type
+![](../repro/surface.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 7: DEM Graz
+![](../repro/dem_python_two.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 8: Gradient Visualization
+![](../repro/gradient_plot_py.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The visualization lacks the "inner districts" clipping shown in the paper due to the missing `innerenbezirke` auxiliary dataset (see [point #1](#effort-1) in Reproduction Efforts).
+
+### Figure 9a: Gradient Distribution (Boxplot)
+![](../repro/slope_all_boxplot.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: Figure shows different range of values (median, IQR, etc.) compared to the figure in the original paper.
+
+### Figure 9b: Gradient Distribution (Histogram)
+![](../repro/slope_all_heighdata.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The reproduced mean (5.32%) differs significantly from the reported value in the paper (3.33%), reflecting an internal inconsistency in the authors' code logic (see [point #12](#effort-12)). This study only updated the x-axis tick interval to ensure legibility (see [point #11](#effort-11)); otherwise, the diverging result is produced exactly by the authors' original computational logic.
+
+### Figure 10a: OSM Incline vs. DEM (Boxplot)
+![](../repro/slope1_boxplot.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The plot significantly differs from the figure in the original paper.
+
+### Figure 10b: OSM Incline vs. DEM (Histogram)
+![](../repro/slope1_hist.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The histogram distribution differs from the figure in the original paper. Figure 10 does not appear to be explicitly referenced or described in the paper text.
+
+### Figure 11: Hexagon map of steps
+![](../repro/hex_steps_py.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 12: Heights of kerbs
+![](../repro/kerb_height.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 13: Width information
+![](../repro/width.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 14: Barriers in Graz
+![](../repro/barriers.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 15
+*Not reproducible (Photograph of critical location).*
+
+\clearpage
+## Route Profiles & Case Studies (Notebook 02)
+
+### Figure 16: Experiment 1 Routes
+![](../repro/experiment1_TUGRAZ.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 17: Experiment 1; Elevation Profile Wheelchair
+*(Skipped: The resulting route array was empty as `pgr_dijkstra` failed to find a valid path between the specified nodes in the strictly constrained wheelchair network - see [point #5](#effort-5) in Reproduction Efforts).*
+
+**Status**: **Issues**.
+
+### Figure 18: Experiment 1; Elevation Profile Pedestrian
+![](../repro/experiment1_TUGraz_elvprofile_ped.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The elevation profile appears unsmoothed compared to the paper. This is a direct consequence of the numerical stability patch applied to the `profiles` function (see [point #5](#effort-5)), which conditionally skips the Savitzky-Golay filter.
+
+### Figure 19: Experiment 2 Routes
+![](../repro/experiment2_Park.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: Severe map distortion caused by a CRS mismatch in the plotting code (buildings in 4326 vs. routes in 3857). Furthermore, logic errors in the notebook led to missing routes and points (see [point #7](#effort-7) in Reproduction Efforts).
+
+### Figure 20: Experiment 2; Elevation Profile Wheelchair
+![](../repro/experiment2_Park_elvprofile_wheel.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The plot is empty as the resulting route array contained no data during this execution (see [point #5](#effort-5)).
+
+### Figure 21: Experiment 2; Elevation Profile Pedestrian
+![](../repro/experiment2_Park_elvprofile_ped.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: The color assignment in the bottom panel (slope threshold) only matches the paper after applying a surgical patch to remove a redundant multiplication factor in the notebook's slope calculation logic (see [point #10](#effort-10)).
+
+\clearpage
+## Routing Analysis (Notebook 03)
+
+### Figure 22: Overview Map Experiment 3
+![](../repro/performance_test.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: Shows a different set of rendered lines compared to the paper because the 1000 route combinations were generated dynamically without a fixed random seed (see [point #8](#effort-8)).
+
+### Figure 23: Detailed Surface Conditions
+![](../repro/surface_performance.png){width="70%" fig-align="center"}
+
+**Status**: **Issues**.
+**Reproduction Note**: Different order of horizontal bars, values don't match with the figure in the paper.
+
+## Additional Figures (Not in Paper)
+
+The following figures were generated by the notebooks but do not have a direct corresponding figure number in the original paper.
+
+### Tag Wordcloud
+![](../repro/wordcloud1.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Unique Sidewalk Map
+![](../repro/unique_sidewalk_py.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+\clearpage
+# Reproduced Tables
+
+The following tables were generated by the reproduction pipeline in `03_routing_analysis.ipynb` and correspond to the statistical summaries in the original paper. To update these tables from the executed notebook, run `python3 scripts/extract_tables.py` from the paper root directory.
+
+**Note on Table Reproducibility**:
+- **Tables 1, 2, and 5**: Conceptual or summary tables not intended for computational reproduction.
+- **Tables 3, 4, 6, 7, 8, and 9**: Statistical or route summaries for which no reproduction code was provided in the authors' notebooks.
+- **Table 13**: City comparison summary that could not be reproduced due to missing data for Linz and Salzburg (see [point #2](#effort-2) in Reproduction Efforts).
+- **Tables 10, 11, and 12**: Successfully reproduced using the Experiment 3 benchmark set, with variations noted below.
+
+Values in reproduce tables below do not match the paper as of now.
+
+\subsection*{Table 10: Analysis of Surface Types for Three Distinct Network Categories}
+\input{../repro/table_10_surface.tex}
+
+\subsection*{Table 11: Analysis Regarding Highway Type for 3 Different Network Types}
+\input{../repro/table_11_highway.tex}
+
+\subsection*{Table 12: Detailed Kerb Type Analysis for the Three Networks}
+\input{../repro/table_12_kerbs.tex}
