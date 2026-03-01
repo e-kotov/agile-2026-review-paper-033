@@ -1,0 +1,94 @@
+---
+title: "Reproducibility review of: Wheelchair Routing Graph Construction and Analysis for Graz"
+author: "Reproducibility Reviewer"
+date: "2026-03-01"
+output:
+  pdf_document:
+    toc: false
+papersize: a4
+header-includes:
+  - |
+    \usepackage{scalerel}
+    \usepackage{tikz}
+    \usetikzlibrary{svg.path}
+    \definecolor{orcidlogocol}{HTML}{A6CE39}
+    \tikzset{
+      orcidlogo/.pic={
+        \fill[orcidlogocol] svg{M256,128c0,70.7-57.3,128-128,128C57.3,256,0,198.7,0,128C0,57.3,57.3,0,128,0C198.7,0,256,57.3,256,128z};
+        \fill[white] svg{M86.3,186.2H70.9V79.1h15.4v48.4V186.2z}
+                     svg{M108.9,79.1h41.6c39.6,0,57,28.3,57,53.6c0,27.5-21.5,53.6-56.8,53.6h-41.8V79.1z     M124.3,172.4h24.5c34.9,0,42.9-26.5,42.9-39.7c0-21.5-13.7-39.7-43.7-39.7h-23.7V172.4z}
+                     svg{M88.7,56.8c0,5.5-4.5,10.1-10.1,10.1c-5.6,0-10.1-4.6-10.1-10.1c0-5.6,4.5-10.1,10.1-10.1C84.2,46.7,88.7,51.3,88.7,56.8z};
+      }
+    }
+    \newcommand\orcid[1]{\href{https://orcid.org/#1}{\raisebox{0.15 em}{\mbox{\scalerel*{
+    \begin{tikzpicture}[yscale=-1, transform shape]
+    \pic{orcidlogo};
+    \end{tikzpicture}
+    }{|}}}}}
+    \definecolor{agileblue}{RGB}{0,77,155}
+urlcolor: agileblue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r logo, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center', out.width='0.3\\linewidth', fig.pos='H'}
+# Logo placeholder
+```
+
+This report is part of the reproducibility review at the AGILE conference.
+For more information see [https://reproducible-agile.github.io/](https://reproducible-agile.github.io/).
+
+# Reviewed paper
+
+Author. (2026). Wheelchair Routing Graph Construction and Analysis for Graz. AGILE GIScience Series.
+
+# Summary
+
+The reproduction study focuses on the Graz-only pipeline, including database setup and analysis notebooks 01 to 03. Notebook 04 (City Comparison) was excluded from the initial review due to missing comparison assets for Linz and Salzburg in the current repository.
+
+- **Result of the reproduction**: [DRAFT: Partial/Full]
+- **Main outcome**: Successful database initialization and execution of core analysis notebooks for Graz.
+
+\clearpage
+
+# Reproducibility reviewer notes
+
+## Scope
+The review covers the full recomputation of the main Graz pipeline as described in the paper's `README.md`. 
+
+The following items were explicitly marked as out of scope for the initial review:
+- `04_city_comparison.ipynb`: Excluded because the repository lacks the Linz comparison assets required by the workflow.
+
+## Technical Details
+Reproduction was performed using a single Docker container containing:
+- PostgreSQL 16 + PostGIS + pgRouting
+- osm2pgsql + osm2pgrouting
+- Python 3.12 with geospatial stack (geopandas, rasterio, etc.)
+
+## Execution Steps
+
+```{bash setup_db, eval=FALSE, size="scriptsize"}
+# Initialize DB cluster
+./scripts/init-db.sh
+
+# Run setup scripts (osm2pgsql, osm2pgrouting, setup.sql)
+./scripts/run-setup.sh
+
+# Run notebooks 01-03
+./scripts/run-notebooks.sh
+```
+
+## Runtime
+- Database Setup: ~X minutes
+- Notebook Execution: ~Y minutes
+
+## Reproduction Efforts
+[DRAFT: Describe any issues encountered during setup.sh or notebook execution]

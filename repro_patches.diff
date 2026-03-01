@@ -1,0 +1,596 @@
+=== Reproducibility Patch Set for Paper 033 ===
+Generated on: Mon Mar  9 13:52:48 CET 2026
+----------------------------------------------------------------------
+
+PATCH FOR: 02_route_profiles.ipynb
+======================================================================
+--- ORIGINAL/02_route_profiles.ipynb
++++ MODIFIED/02_route_profiles.ipynb
+@@ -163,7 +163,7 @@
+     "                           FROM points,\n",
+     "                                heightdata.graz_dem_vector_square belevv\n",
+     "                           WHERE ST_Intersects((st_transform(points_geom, 32633)), belevv.geom))\n",
+-    "        SELECT elevation, elevation.points_geom as the_geom, route.tags_h -> 'highway'as highway, route.tags_h -> 'surface'as surface, slope *100 as slope\n",
++    "        SELECT elevation, elevation.points_geom as the_geom, route.tags_h -> 'highway'as highway, route.tags_h -> 'surface'as surface, slope as slope\n",
+     "        FROM elevation,route,united\n",
+     "        WHERE st_dwithin(st_transform(points_geom, 32633), st_transform(route_geom, 32633),0.01);''',\n",
+     "                                       engine, geom_col= 'the_geom', crs=32633)\n",
+@@ -206,12 +206,15 @@
+     "wheelchair_exp1 = get_elevationpoint_df('graz_pgr', 'wheelchair_network', 80, 108, 32633)\n",
+     "\n",
+     "def profiles(ax, df_plot, mythema, color_dict=None):\n",
++    "    if df_plot.empty:\n",
++    "        print(\"Warning: df_plot is empty, skipping plot.\")\n",
++    "        return\n",
+     "\n",
+     "    df_plot = df_plot.copy()\n",
+     "    thema = mythema\n",
+     "\n",
+     "    from scipy.signal import savgol_filter\n",
+-    "    df_plot['elevation'] = savgol_filter(df_plot['elevation'], 5, 2)\n",
++    "    if len(df_plot[\"elevation\"]) >= 5:\n        df_plot[\"elevation\"] = savgol_filter(df_plot[\"elevation\"], 5, 2) \n",
+     "    df_plot['change'] = df_plot[thema].ne(df_plot[thema].shift().bfill()).astype(int)\n",
+     "    df_plot['subgroup'] = df_plot['change'].cumsum()\n",
+     "    df_plot.index += df_plot['subgroup'].values\n",
+@@ -310,13 +313,16 @@
+     "pedestrian_exp_1 = get_elevationpoint_df('graz_pgr', 'pedestrian_network', 1051, 28162, 32633) # get elevation profile\n",
+     "\n",
+     "def profiles(ax, df_plot, mythema, color_dict=None): # plot elevation profile\n",
++    "    if df_plot.empty:\n",
++    "        print(\"Warning: df_plot is empty, skipping plot.\")\n",
++    "        return\n",
+     "\n",
+     "\n",
+     "    df_plot = df_plot.copy() # copy dataframe to avoid warning\n",
+     "    thema = mythema # set thema\n",
+     "\n",
+     "    from scipy.signal import savgol_filter # import savgol filter\n",
+-    "    df_plot['elevation'] = savgol_filter(df_plot['elevation'], 5, 2) # smooth elevation data\n",
++    "    if len(df_plot[\"elevation\"]) >= 5:\n        df_plot[\"elevation\"] = savgol_filter(df_plot[\"elevation\"], 5, 2) # smooth elevation data\n\n",
+     "    df_plot['change'] = df_plot[thema].ne(df_plot[thema].shift().bfill()).astype(int) # create change column\n",
+     "    df_plot['subgroup'] = df_plot['change'].cumsum() # create subgroup for each thema\n",
+     "    df_plot.index += df_plot['subgroup'].values # add subgroup to index\n",
+@@ -337,7 +343,7 @@
+     "    if color_dict != None:\n",
+     "        my_dict = color_dict\n",
+     "    else:\n",
+-    "        color_list2 = [next(ax._get_lines.prop_cycler)['color'] for x, g in df_plot.groupby(thema)]\n",
++    "        color_list2 = [plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"][i % len(plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"])] for i, (x, g) in enumerate(df_plot.groupby(thema))]\n",
+     "        label_list2 = [x for x, g in df_plot.groupby(thema)]\n",
+     "        my_dict = {'label': label_list2, 'color': color_list2}\n",
+     "\n",
+@@ -416,12 +422,15 @@
+     "wheelchair_exp2 = get_elevationpoint_df('graz_pgr', 'wheelchair_network', 54022, 3322, 32633)\n",
+     "\n",
+     "def profiles(ax, df_plot, mythema, color_dict=None):\n",
++    "    if df_plot.empty:\n",
++    "        print(\"Warning: df_plot is empty, skipping plot.\")\n",
++    "        return\n",
+     "\n",
+     "    df_plot = df_plot.copy()\n",
+     "    thema = mythema\n",
+     "\n",
+     "    from scipy.signal import savgol_filter\n",
+-    "    df_plot['elevation'] = savgol_filter(df_plot['elevation'], 5, 2)\n",
++    "    if len(df_plot[\"elevation\"]) >= 5:\n        df_plot[\"elevation\"] = savgol_filter(df_plot[\"elevation\"], 5, 2) \n",
+     "    df_plot['change'] = df_plot[thema].ne(df_plot[thema].shift().bfill()).astype(int)\n",
+     "    df_plot['subgroup'] = df_plot['change'].cumsum()\n",
+     "    df_plot.index += df_plot['subgroup'].values\n",
+@@ -442,7 +451,7 @@
+     "    if color_dict != None:\n",
+     "        my_dict = color_dict\n",
+     "    else:\n",
+-    "        color_list2 = [next(ax._get_lines.prop_cycler)['color'] for x, g in df_plot.groupby(thema)]\n",
++    "        color_list2 = [plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"][i % len(plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"])] for i, (x, g) in enumerate(df_plot.groupby(thema))]\n",
+     "        label_list2 = [x for x, g in df_plot.groupby(thema)]\n",
+     "        my_dict = {'label': label_list2, 'color': color_list2}\n",
+     "\n",
+@@ -519,12 +528,15 @@
+     "wheelchair_exp2 = get_elevationpoint_df('graz_pgr', 'wheelchair_network', 54022, 3322, 32633)\n",
+     "\n",
+     "def profiles(ax, df_plot, mythema, color_dict=None):\n",
++    "    if df_plot.empty:\n",
++    "        print(\"Warning: df_plot is empty, skipping plot.\")\n",
++    "        return\n",
+     "\n",
+     "    df_plot = df_plot.copy()\n",
+     "    thema = mythema\n",
+     "\n",
+     "    from scipy.signal import savgol_filter\n",
+-    "    df_plot['elevation'] = savgol_filter(df_plot['elevation'], 5, 2)\n",
++    "    if len(df_plot[\"elevation\"]) >= 5:\n        df_plot[\"elevation\"] = savgol_filter(df_plot[\"elevation\"], 5, 2) \n",
+     "    df_plot['change'] = df_plot[thema].ne(df_plot[thema].shift().bfill()).astype(int)\n",
+     "    df_plot['subgroup'] = df_plot['change'].cumsum()\n",
+     "    df_plot.index += df_plot['subgroup'].values\n",
+@@ -545,7 +557,7 @@
+     "    if color_dict != None:\n",
+     "        my_dict = color_dict\n",
+     "    else:\n",
+-    "        color_list2 = [next(ax._get_lines.prop_cycler)['color'] for x, g in df_plot.groupby(thema)]\n",
++    "        color_list2 = [plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"][i % len(plt.rcParams[\"axes.prop_cycle\"].by_key()[\"color\"])] for i, (x, g) in enumerate(df_plot.groupby(thema))]\n",
+     "        label_list2 = [x for x, g in df_plot.groupby(thema)]\n",
+     "        my_dict = {'label': label_list2, 'color': color_list2}\n",
+     "\n",
+@@ -810,4 +822,4 @@
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+-}
++}
+\ No newline at end of file
+----------------------------------------------------------------------
+
+PATCH FOR: setup.sql
+======================================================================
+--- ORIGINAL/setup.sql
++++ MODIFIED/setup.sql
+@@ -330,80 +330,25 @@
+ SELECT st_union(the_geom) AS the_geom FROM graz_pgr;
+ 
+ -- Street network union clipped to inner districts
+-DROP TABLE IF EXISTS viz.graz_pgr_union_inner;
+-CREATE TABLE viz.graz_pgr_union_inner AS
+-SELECT st_union(the_geom) AS the_geom
+-FROM graz_pgr, innerenbezirke
+-WHERE st_within(graz_pgr.the_geom, innerenbezirke.geom);
++-- [REPRO PATCH] DROP TABLE IF EXISTS viz.graz_pgr_union_inner;
++-- [REPRO PATCH] CREATE TABLE viz.graz_pgr_union_inner AS
++-- [REPRO PATCH] SELECT st_union(the_geom) AS the_geom
++-- [REPRO PATCH] FROM graz_pgr, innerenbezirke
++-- [REPRO PATCH] WHERE st_within(graz_pgr.the_geom, innerenbezirke.geom);
+ 
+ -- =====================================================================
+--- 10. COMPARISON (GRAZ / LINZ / SALZBURG)
+--- =====================================================================
+--- Preconditions: *_ways, *_pgr_ways, and *_border tables exist for all cities.
+-CREATE SCHEMA IF NOT EXISTS compare;
+-
+--- Add hstore tags to each city ways table.
+-ALTER TABLE graz_ways ADD COLUMN tags_h hstore;
+-ALTER TABLE linz_ways ADD COLUMN tags_h hstore;
+-ALTER TABLE salzburg_ways ADD COLUMN tags_h hstore;
+-
+-UPDATE graz_ways SET tags_h = hstore(tags);
+-UPDATE linz_ways SET tags_h = hstore(tags);
+-UPDATE salzburg_ways SET tags_h = hstore(tags);
+-
+--- Join OSM ways with routing topology per city.
+-DROP TABLE IF EXISTS compare.streets_graz;
+-CREATE TABLE compare.streets_graz AS
+-SELECT *
+-FROM graz_ways
+-LEFT JOIN graz_pgr_ways ON graz_ways.id = graz_pgr_ways.osm_id;
+-
+-DROP TABLE IF EXISTS compare.streets_linz;
+-CREATE TABLE compare.streets_linz AS
+-SELECT *
+-FROM linz_ways
+-LEFT JOIN linz_pgr_ways ON linz_ways.id = linz_pgr_ways.osm_id;
+-
+-DROP TABLE IF EXISTS compare.streets_salzburg;
+-CREATE TABLE compare.streets_salzburg AS
+-SELECT *
+-FROM salzburg_ways
+-LEFT JOIN salzburg_pgr_ways ON salzburg_ways.id = salzburg_pgr_ways.osm_id;
+-
+--- Clip streets to city borders.
+-DROP TABLE IF EXISTS compare.graz_pgr;
+-CREATE TABLE compare.graz_pgr AS
+-SELECT DISTINCT s.*
+-FROM compare.streets_graz AS s
+-LEFT JOIN graz_border ON ST_Intersects(s.the_geom, graz_border.geom)
+-WHERE ST_Within(s.the_geom, graz_border.geom);
+-
+-DROP TABLE IF EXISTS compare.linz_pgr;
+-CREATE TABLE compare.linz_pgr AS
+-SELECT DISTINCT s.*
+-FROM compare.streets_linz AS s
+-LEFT JOIN linz_border ON ST_Intersects(s.the_geom, linz_border.geom)
+-WHERE ST_Within(s.the_geom, linz_border.geom);
+-
+-DROP TABLE IF EXISTS compare.salzburg_pgr;
+-CREATE TABLE compare.salzburg_pgr AS
+-SELECT DISTINCT s.*
+-FROM compare.streets_salzburg AS s
+-LEFT JOIN salzburg_border ON ST_Intersects(s.the_geom, salzburg_border.geom)
+-WHERE ST_Within(s.the_geom, salzburg_border.geom);
+-
+--- Sidewalk-unique layers per city.
+-DROP TABLE IF EXISTS compare.graz_sidewalk_unique;
+-CREATE TABLE compare.graz_sidewalk_unique AS
++-- [REPRO PATCH] Restored graz_sidewalk_unique for Notebook 01
++DROP TABLE IF EXISTS graz_sidewalk_unique;
++CREATE TABLE graz_sidewalk_unique AS
+ WITH highway_footwayxfootway_sidewalk AS (
+      SELECT *
+-     FROM compare.graz_pgr
++     FROM graz_pgr
+      WHERE tags_h -> 'highway' IN ('footway')
+        AND tags_h -> 'footway' IN ('sidewalk')
+ ),
+ sidewalk AS (
+      SELECT *
+-     FROM compare.graz_pgr
++     FROM graz_pgr
+      WHERE tags_h ? 'sidewalk'
+        AND tags_h -> 'sidewalk' NOT IN ('no')
+ )
+@@ -417,130 +362,212 @@
+         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
+ );
+ 
+-DROP TABLE IF EXISTS compare.linz_sidewalk_unique;
+-CREATE TABLE compare.linz_sidewalk_unique AS
+-WITH highway_footwayxfootway_sidewalk AS (
+-     SELECT *
+-     FROM compare.linz_pgr
+-     WHERE tags_h -> 'highway' IN ('footway')
+-       AND tags_h -> 'footway' IN ('sidewalk')
+-),
+-sidewalk AS (
+-     SELECT *
+-     FROM compare.linz_pgr
+-     WHERE tags_h ? 'sidewalk'
+-       AND tags_h -> 'sidewalk' NOT IN ('no')
+-)
+-SELECT * FROM highway_footwayxfootway_sidewalk
+-UNION
+-SELECT * FROM sidewalk AS aa
+-WHERE aa.gid NOT IN (
+-     SELECT aa.gid
+-     FROM highway_footwayxfootway_sidewalk AS bb
+-     WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
+-        OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
+-);
+-
+-DROP TABLE IF EXISTS compare.salzburg_sidewalk_unique;
+-CREATE TABLE compare.salzburg_sidewalk_unique AS
+-WITH highway_footwayxfootway_sidewalk AS (
+-     SELECT *
+-     FROM compare.salzburg_pgr
+-     WHERE tags_h -> 'highway' IN ('footway')
+-       AND tags_h -> 'footway' IN ('sidewalk')
+-),
+-sidewalk AS (
+-     SELECT *
+-     FROM compare.salzburg_pgr
+-     WHERE tags_h ? 'sidewalk'
+-       AND tags_h -> 'sidewalk' NOT IN ('no')
+-)
+-SELECT * FROM highway_footwayxfootway_sidewalk
+-UNION
+-SELECT * FROM sidewalk AS aa
+-WHERE aa.gid NOT IN (
+-     SELECT aa.gid
+-     FROM highway_footwayxfootway_sidewalk AS bb
+-     WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
+-        OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
+-);
+-
+--- 3km buffer network extracts (Graz center coordinates as provided).
+-DROP TABLE IF EXISTS compare.graz_pgr_3km;
+-CREATE TABLE compare.graz_pgr_3km AS
+-SELECT *
+-FROM compare.graz_pgr
+-WHERE st_within(
+-     st_transform(the_geom, 3857),
+-     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+-);
+-
+-DROP TABLE IF EXISTS compare.linz_pgr_3km;
+-CREATE TABLE compare.linz_pgr_3km AS
+-SELECT *
+-FROM compare.linz_pgr
+-WHERE st_within(
+-     st_transform(the_geom, 3857),
+-     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+-);
+-
+-DROP TABLE IF EXISTS compare.salzburg_pgr_3km;
+-CREATE TABLE compare.salzburg_pgr_3km AS
+-SELECT *
+-FROM compare.salzburg_pgr
+-WHERE st_within(
+-     st_transform(the_geom, 3857),
+-     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+-);
+-
+--- Area summary per city border (km^2).
+-DROP TABLE IF EXISTS compare.city_area_km2;
+-CREATE TABLE compare.city_area_km2 AS
+-SELECT 'graz' AS city, st_area(graz_border.geom::geography) / 1000000 AS area_km2
+-UNION ALL
+-SELECT 'linz' AS city, st_area(linz_border.geom::geography) / 1000000 AS area_km2
+-UNION ALL
+-SELECT 'salzburg' AS city, st_area(salzburg_border.geom::geography) / 1000000 AS area_km2;
+-
+--- Summary counts and lengths for comparison outputs.
+-DROP TABLE IF EXISTS compare.summary_counts;
+-CREATE TABLE compare.summary_counts AS
+-SELECT 'total_edges_3km' AS metric,
+-        (SELECT COUNT(*) FROM compare.graz_pgr_3km) AS graz,
+-        (SELECT COUNT(*) FROM compare.linz_pgr_3km) AS linz,
+-        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km) AS salzburg
+-UNION ALL
+-SELECT 'footway_edges_3km' AS metric,
+-        (SELECT COUNT(*) FROM compare.graz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
+-        (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
+-        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h -> 'highway' IN ('footway'))
+-UNION ALL
+-SELECT 'sidewalk_edges_3km' AS metric,
+-        (SELECT COUNT(*) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk'),
+-        (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
+-        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+-UNION ALL
+-SELECT 'sidewalk_length_m_3km' AS metric,
+-        (SELECT SUM(length_m) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk'),
+-        (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
+-        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+-UNION ALL
+-SELECT 'total_length_m_3km' AS metric,
+-        (SELECT SUM(length_m) FROM compare.graz_pgr_3km),
+-        (SELECT SUM(length_m) FROM compare.linz_pgr_3km),
+-        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km);
+ 
+--- Sidewalk coverage percentage per city (sidewalk length / total length * 100).
+-DROP TABLE IF EXISTS compare.summary_percentages;
+-CREATE TABLE compare.summary_percentages AS
+-SELECT 'graz' AS city,
+-        (SELECT SUM(length_m) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk')
+-        / NULLIF((SELECT SUM(length_m) FROM compare.graz_pgr_3km), 0) * 100 AS sidewalk_pct
+-UNION ALL
+-SELECT 'linz' AS city,
+-        (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk')
+-        / NULLIF((SELECT SUM(length_m) FROM compare.linz_pgr_3km), 0) * 100 AS sidewalk_pct
+-UNION ALL
+-SELECT 'salzburg' AS city,
+-        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+-        / NULLIF((SELECT SUM(length_m) FROM compare.salzburg_pgr_3km), 0) * 100 AS sidewalk_pct;
++-- [REPRO PATCH] Skipping section due to missing Linz/Salzburg data
++-- -- 10. COMPARISON (GRAZ / LINZ / SALZBURG)
++-- -- =====================================================================
++-- -- Preconditions: *_ways, *_pgr_ways, and *_border tables exist for all cities.
++-- CREATE SCHEMA IF NOT EXISTS compare;
++-- 
++-- -- Add hstore tags to each city ways table.
++-- ALTER TABLE graz_ways ADD COLUMN tags_h hstore;
++-- ALTER TABLE linz_ways ADD COLUMN tags_h hstore;
++-- ALTER TABLE salzburg_ways ADD COLUMN tags_h hstore;
++-- 
++-- UPDATE graz_ways SET tags_h = hstore(tags);
++-- UPDATE linz_ways SET tags_h = hstore(tags);
++-- UPDATE salzburg_ways SET tags_h = hstore(tags);
++-- 
++-- -- Join OSM ways with routing topology per city.
++-- DROP TABLE IF EXISTS compare.streets_graz;
++-- CREATE TABLE compare.streets_graz AS
++-- SELECT *
++-- FROM graz_ways
++-- LEFT JOIN graz_pgr_ways ON graz_ways.id = graz_pgr_ways.osm_id;
++-- 
++-- DROP TABLE IF EXISTS compare.streets_linz;
++-- CREATE TABLE compare.streets_linz AS
++-- SELECT *
++-- FROM linz_ways
++-- LEFT JOIN linz_pgr_ways ON linz_ways.id = linz_pgr_ways.osm_id;
++-- 
++-- DROP TABLE IF EXISTS compare.streets_salzburg;
++-- CREATE TABLE compare.streets_salzburg AS
++-- SELECT *
++-- FROM salzburg_ways
++-- LEFT JOIN salzburg_pgr_ways ON salzburg_ways.id = salzburg_pgr_ways.osm_id;
++-- 
++-- -- Clip streets to city borders.
++-- DROP TABLE IF EXISTS compare.graz_pgr;
++-- CREATE TABLE compare.graz_pgr AS
++-- SELECT DISTINCT s.*
++-- FROM compare.streets_graz AS s
++-- LEFT JOIN graz_border ON ST_Intersects(s.the_geom, graz_border.geom)
++-- WHERE ST_Within(s.the_geom, graz_border.geom);
++-- 
++-- DROP TABLE IF EXISTS compare.linz_pgr;
++-- CREATE TABLE compare.linz_pgr AS
++-- SELECT DISTINCT s.*
++-- FROM compare.streets_linz AS s
++-- LEFT JOIN linz_border ON ST_Intersects(s.the_geom, linz_border.geom)
++-- WHERE ST_Within(s.the_geom, linz_border.geom);
++-- 
++-- DROP TABLE IF EXISTS compare.salzburg_pgr;
++-- CREATE TABLE compare.salzburg_pgr AS
++-- SELECT DISTINCT s.*
++-- FROM compare.streets_salzburg AS s
++-- LEFT JOIN salzburg_border ON ST_Intersects(s.the_geom, salzburg_border.geom)
++-- WHERE ST_Within(s.the_geom, salzburg_border.geom);
++-- 
++-- -- Sidewalk-unique layers per city.
++-- DROP TABLE IF EXISTS compare.graz_sidewalk_unique;
++-- CREATE TABLE compare.graz_sidewalk_unique AS
++-- WITH highway_footwayxfootway_sidewalk AS (
++--      SELECT *
++--      FROM graz_pgr
++--      WHERE tags_h -> 'highway' IN ('footway')
++--        AND tags_h -> 'footway' IN ('sidewalk')
++-- ),
++-- sidewalk AS (
++--      SELECT *
++--      FROM graz_pgr
++--      WHERE tags_h ? 'sidewalk'
++--        AND tags_h -> 'sidewalk' NOT IN ('no')
++-- )
++-- SELECT * FROM highway_footwayxfootway_sidewalk
++-- UNION
++-- SELECT * FROM sidewalk AS aa
++-- WHERE aa.gid NOT IN (
++--      SELECT aa.gid
++--      FROM highway_footwayxfootway_sidewalk AS bb
++--      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
++--         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
++-- );
++-- 
++-- DROP TABLE IF EXISTS compare.linz_sidewalk_unique;
++-- CREATE TABLE compare.linz_sidewalk_unique AS
++-- WITH highway_footwayxfootway_sidewalk AS (
++--      SELECT *
++--      FROM compare.linz_pgr
++--      WHERE tags_h -> 'highway' IN ('footway')
++--        AND tags_h -> 'footway' IN ('sidewalk')
++-- ),
++-- sidewalk AS (
++--      SELECT *
++--      FROM compare.linz_pgr
++--      WHERE tags_h ? 'sidewalk'
++--        AND tags_h -> 'sidewalk' NOT IN ('no')
++-- )
++-- SELECT * FROM highway_footwayxfootway_sidewalk
++-- UNION
++-- SELECT * FROM sidewalk AS aa
++-- WHERE aa.gid NOT IN (
++--      SELECT aa.gid
++--      FROM highway_footwayxfootway_sidewalk AS bb
++--      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
++--         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
++-- );
++-- 
++-- DROP TABLE IF EXISTS compare.salzburg_sidewalk_unique;
++-- CREATE TABLE compare.salzburg_sidewalk_unique AS
++-- WITH highway_footwayxfootway_sidewalk AS (
++--      SELECT *
++--      FROM compare.salzburg_pgr
++--      WHERE tags_h -> 'highway' IN ('footway')
++--        AND tags_h -> 'footway' IN ('sidewalk')
++-- ),
++-- sidewalk AS (
++--      SELECT *
++--      FROM compare.salzburg_pgr
++--      WHERE tags_h ? 'sidewalk'
++--        AND tags_h -> 'sidewalk' NOT IN ('no')
++-- )
++-- SELECT * FROM highway_footwayxfootway_sidewalk
++-- UNION
++-- SELECT * FROM sidewalk AS aa
++-- WHERE aa.gid NOT IN (
++--      SELECT aa.gid
++--      FROM highway_footwayxfootway_sidewalk AS bb
++--      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
++--         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
++-- );
++-- 
++-- -- 3km buffer network extracts (Graz center coordinates as provided).
++-- DROP TABLE IF EXISTS compare.graz_pgr_3km;
++-- CREATE TABLE compare.graz_pgr_3km AS
++-- SELECT *
++-- FROM graz_pgr
++-- WHERE st_within(
++--      st_transform(the_geom, 3857),
++--      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
++-- );
++-- 
++-- DROP TABLE IF EXISTS compare.linz_pgr_3km;
++-- CREATE TABLE compare.linz_pgr_3km AS
++-- SELECT *
++-- FROM compare.linz_pgr
++-- WHERE st_within(
++--      st_transform(the_geom, 3857),
++--      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
++-- );
++-- 
++-- DROP TABLE IF EXISTS compare.salzburg_pgr_3km;
++-- CREATE TABLE compare.salzburg_pgr_3km AS
++-- SELECT *
++-- FROM compare.salzburg_pgr
++-- WHERE st_within(
++--      st_transform(the_geom, 3857),
++--      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
++-- );
++-- 
++-- -- Area summary per city border (km^2).
++-- DROP TABLE IF EXISTS compare.city_area_km2;
++-- CREATE TABLE compare.city_area_km2 AS
++-- SELECT 'graz' AS city, st_area(graz_border.geom::geography) / 1000000 AS area_km2
++-- UNION ALL
++-- SELECT 'linz' AS city, st_area(linz_border.geom::geography) / 1000000 AS area_km2
++-- UNION ALL
++-- SELECT 'salzburg' AS city, st_area(salzburg_border.geom::geography) / 1000000 AS area_km2;
++-- 
++-- -- Summary counts and lengths for comparison outputs.
++-- DROP TABLE IF EXISTS compare.summary_counts;
++-- CREATE TABLE compare.summary_counts AS
++-- SELECT 'total_edges_3km' AS metric,
++--         (SELECT COUNT(*) FROM graz_pgr_3km) AS graz,
++--         (SELECT COUNT(*) FROM compare.linz_pgr_3km) AS linz,
++--         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km) AS salzburg
++-- UNION ALL
++-- SELECT 'footway_edges_3km' AS metric,
++--         (SELECT COUNT(*) FROM graz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
++--         (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
++--         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h -> 'highway' IN ('footway'))
++-- UNION ALL
++-- SELECT 'sidewalk_edges_3km' AS metric,
++--         (SELECT COUNT(*) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk'),
++--         (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
++--         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
++-- UNION ALL
++-- SELECT 'sidewalk_length_m_3km' AS metric,
++--         (SELECT SUM(length_m) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk'),
++--         (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
++--         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
++-- UNION ALL
++-- SELECT 'total_length_m_3km' AS metric,
++--         (SELECT SUM(length_m) FROM graz_pgr_3km),
++--         (SELECT SUM(length_m) FROM compare.linz_pgr_3km),
++--         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km);
++-- 
++-- -- Sidewalk coverage percentage per city (sidewalk length / total length * 100).
++-- DROP TABLE IF EXISTS compare.summary_percentages;
++-- CREATE TABLE compare.summary_percentages AS
++-- SELECT 'graz' AS city,
++--         (SELECT SUM(length_m) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk')
++--         / NULLIF((SELECT SUM(length_m) FROM graz_pgr_3km), 0) * 100 AS sidewalk_pct
++-- UNION ALL
++-- SELECT 'linz' AS city,
++--         (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk')
++--         / NULLIF((SELECT SUM(length_m) FROM compare.linz_pgr_3km), 0) * 100 AS sidewalk_pct
++-- UNION ALL
++-- SELECT 'salzburg' AS city,
++--         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
++--         / NULLIF((SELECT SUM(length_m) FROM compare.salzburg_pgr_3km), 0) * 100 AS sidewalk_pct;
+----------------------------------------------------------------------
+
+NEW FILE (not in original source): table_10_surface.tex
+======================================================================
+
+PATCH FOR: 01_data_exploration.ipynb
+======================================================================
+--- ORIGINAL/01_data_exploration.ipynb
++++ MODIFIED/01_data_exploration.ipynb
+@@ -634,7 +634,7 @@
+     "\n",
+     "#ax.set_title('Slope Histogram All Streets', fontsize=14)\n",
+     "ax.grid(True, which= 'both', axis='y', lw = .2)\n",
+-    "ax.set_xticks(np.arange(0, without_outliers_iqr.slope_dem.max() + 1, .5))\n",
++    "ax.set_xticks(np.arange(0, without_outliers_iqr.slope_dem.max() + 1, 5.0))\n",
+     "ax.set_xlabel('slope %')\n",
+     "ax.set_ylabel('count')\n",
+     "sns.despine()\n",
+----------------------------------------------------------------------
+
+PATCH FOR: 03_routing_analysis.ipynb
+======================================================================
+--- ORIGINAL/03_routing_analysis.ipynb
++++ MODIFIED/03_routing_analysis.ipynb
+@@ -350,7 +350,7 @@
+     "appended_data_p = gpd.read_postgis('SELECT * FROM performance_test_appended_data_p', engine, geom_col= 'the_geom')\n",
+     "appended_data_w = gpd.read_postgis('SELECT * FROM performance_test_appended_data_w', engine, geom_col= 'the_geom')\n",
+     "\n",
+-    "count_test = pd.read_sql('SELECT count(*) FROM performance_test_appended_data_w WHERE slope * 100 > 10', engine)\n",
++    "count_test = pd.read_sql('SELECT count(*) FROM performance_test_appended_data_w WHERE slope > 10', engine)\n",
+     "count_test"
+    ]
+   },
+----------------------------------------------------------------------
+
+NEW FILE (not in original source): table_11_highway.tex
+======================================================================
+
+NEW FILE (not in original source): table_12_kerbs.tex
+======================================================================
