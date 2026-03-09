@@ -330,25 +330,80 @@ CREATE TABLE viz.graz_pgr_union AS
 SELECT st_union(the_geom) AS the_geom FROM graz_pgr;
 
 -- Street network union clipped to inner districts
--- [REPRO PATCH] DROP TABLE IF EXISTS viz.graz_pgr_union_inner;
--- [REPRO PATCH] CREATE TABLE viz.graz_pgr_union_inner AS
--- [REPRO PATCH] SELECT st_union(the_geom) AS the_geom
--- [REPRO PATCH] FROM graz_pgr, innerenbezirke
--- [REPRO PATCH] WHERE st_within(graz_pgr.the_geom, innerenbezirke.geom);
+DROP TABLE IF EXISTS viz.graz_pgr_union_inner;
+CREATE TABLE viz.graz_pgr_union_inner AS
+SELECT st_union(the_geom) AS the_geom
+FROM graz_pgr, innerenbezirke
+WHERE st_within(graz_pgr.the_geom, innerenbezirke.geom);
 
 -- =====================================================================
--- [REPRO PATCH] Restored graz_sidewalk_unique for Notebook 01
-DROP TABLE IF EXISTS graz_sidewalk_unique;
-CREATE TABLE graz_sidewalk_unique AS
+-- 10. COMPARISON (GRAZ / LINZ / SALZBURG)
+-- =====================================================================
+-- Preconditions: *_ways, *_pgr_ways, and *_border tables exist for all cities.
+CREATE SCHEMA IF NOT EXISTS compare;
+
+-- Add hstore tags to each city ways table.
+ALTER TABLE graz_ways ADD COLUMN tags_h hstore;
+ALTER TABLE linz_ways ADD COLUMN tags_h hstore;
+ALTER TABLE salzburg_ways ADD COLUMN tags_h hstore;
+
+UPDATE graz_ways SET tags_h = hstore(tags);
+UPDATE linz_ways SET tags_h = hstore(tags);
+UPDATE salzburg_ways SET tags_h = hstore(tags);
+
+-- Join OSM ways with routing topology per city.
+DROP TABLE IF EXISTS compare.streets_graz;
+CREATE TABLE compare.streets_graz AS
+SELECT *
+FROM graz_ways
+LEFT JOIN graz_pgr_ways ON graz_ways.id = graz_pgr_ways.osm_id;
+
+DROP TABLE IF EXISTS compare.streets_linz;
+CREATE TABLE compare.streets_linz AS
+SELECT *
+FROM linz_ways
+LEFT JOIN linz_pgr_ways ON linz_ways.id = linz_pgr_ways.osm_id;
+
+DROP TABLE IF EXISTS compare.streets_salzburg;
+CREATE TABLE compare.streets_salzburg AS
+SELECT *
+FROM salzburg_ways
+LEFT JOIN salzburg_pgr_ways ON salzburg_ways.id = salzburg_pgr_ways.osm_id;
+
+-- Clip streets to city borders.
+DROP TABLE IF EXISTS compare.graz_pgr;
+CREATE TABLE compare.graz_pgr AS
+SELECT DISTINCT s.*
+FROM compare.streets_graz AS s
+LEFT JOIN graz_border ON ST_Intersects(s.the_geom, graz_border.geom)
+WHERE ST_Within(s.the_geom, graz_border.geom);
+
+DROP TABLE IF EXISTS compare.linz_pgr;
+CREATE TABLE compare.linz_pgr AS
+SELECT DISTINCT s.*
+FROM compare.streets_linz AS s
+LEFT JOIN linz_border ON ST_Intersects(s.the_geom, linz_border.geom)
+WHERE ST_Within(s.the_geom, linz_border.geom);
+
+DROP TABLE IF EXISTS compare.salzburg_pgr;
+CREATE TABLE compare.salzburg_pgr AS
+SELECT DISTINCT s.*
+FROM compare.streets_salzburg AS s
+LEFT JOIN salzburg_border ON ST_Intersects(s.the_geom, salzburg_border.geom)
+WHERE ST_Within(s.the_geom, salzburg_border.geom);
+
+-- Sidewalk-unique layers per city.
+DROP TABLE IF EXISTS compare.graz_sidewalk_unique;
+CREATE TABLE compare.graz_sidewalk_unique AS
 WITH highway_footwayxfootway_sidewalk AS (
      SELECT *
-     FROM graz_pgr
+     FROM compare.graz_pgr
      WHERE tags_h -> 'highway' IN ('footway')
        AND tags_h -> 'footway' IN ('sidewalk')
 ),
 sidewalk AS (
      SELECT *
-     FROM graz_pgr
+     FROM compare.graz_pgr
      WHERE tags_h ? 'sidewalk'
        AND tags_h -> 'sidewalk' NOT IN ('no')
 )
@@ -362,212 +417,130 @@ WHERE aa.gid NOT IN (
         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
 );
 
+DROP TABLE IF EXISTS compare.linz_sidewalk_unique;
+CREATE TABLE compare.linz_sidewalk_unique AS
+WITH highway_footwayxfootway_sidewalk AS (
+     SELECT *
+     FROM compare.linz_pgr
+     WHERE tags_h -> 'highway' IN ('footway')
+       AND tags_h -> 'footway' IN ('sidewalk')
+),
+sidewalk AS (
+     SELECT *
+     FROM compare.linz_pgr
+     WHERE tags_h ? 'sidewalk'
+       AND tags_h -> 'sidewalk' NOT IN ('no')
+)
+SELECT * FROM highway_footwayxfootway_sidewalk
+UNION
+SELECT * FROM sidewalk AS aa
+WHERE aa.gid NOT IN (
+     SELECT aa.gid
+     FROM highway_footwayxfootway_sidewalk AS bb
+     WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
+        OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
+);
 
--- [REPRO PATCH] Skipping section due to missing Linz/Salzburg data
--- -- 10. COMPARISON (GRAZ / LINZ / SALZBURG)
--- -- =====================================================================
--- -- Preconditions: *_ways, *_pgr_ways, and *_border tables exist for all cities.
--- CREATE SCHEMA IF NOT EXISTS compare;
--- 
--- -- Add hstore tags to each city ways table.
--- ALTER TABLE graz_ways ADD COLUMN tags_h hstore;
--- ALTER TABLE linz_ways ADD COLUMN tags_h hstore;
--- ALTER TABLE salzburg_ways ADD COLUMN tags_h hstore;
--- 
--- UPDATE graz_ways SET tags_h = hstore(tags);
--- UPDATE linz_ways SET tags_h = hstore(tags);
--- UPDATE salzburg_ways SET tags_h = hstore(tags);
--- 
--- -- Join OSM ways with routing topology per city.
--- DROP TABLE IF EXISTS compare.streets_graz;
--- CREATE TABLE compare.streets_graz AS
--- SELECT *
--- FROM graz_ways
--- LEFT JOIN graz_pgr_ways ON graz_ways.id = graz_pgr_ways.osm_id;
--- 
--- DROP TABLE IF EXISTS compare.streets_linz;
--- CREATE TABLE compare.streets_linz AS
--- SELECT *
--- FROM linz_ways
--- LEFT JOIN linz_pgr_ways ON linz_ways.id = linz_pgr_ways.osm_id;
--- 
--- DROP TABLE IF EXISTS compare.streets_salzburg;
--- CREATE TABLE compare.streets_salzburg AS
--- SELECT *
--- FROM salzburg_ways
--- LEFT JOIN salzburg_pgr_ways ON salzburg_ways.id = salzburg_pgr_ways.osm_id;
--- 
--- -- Clip streets to city borders.
--- DROP TABLE IF EXISTS compare.graz_pgr;
--- CREATE TABLE compare.graz_pgr AS
--- SELECT DISTINCT s.*
--- FROM compare.streets_graz AS s
--- LEFT JOIN graz_border ON ST_Intersects(s.the_geom, graz_border.geom)
--- WHERE ST_Within(s.the_geom, graz_border.geom);
--- 
--- DROP TABLE IF EXISTS compare.linz_pgr;
--- CREATE TABLE compare.linz_pgr AS
--- SELECT DISTINCT s.*
--- FROM compare.streets_linz AS s
--- LEFT JOIN linz_border ON ST_Intersects(s.the_geom, linz_border.geom)
--- WHERE ST_Within(s.the_geom, linz_border.geom);
--- 
--- DROP TABLE IF EXISTS compare.salzburg_pgr;
--- CREATE TABLE compare.salzburg_pgr AS
--- SELECT DISTINCT s.*
--- FROM compare.streets_salzburg AS s
--- LEFT JOIN salzburg_border ON ST_Intersects(s.the_geom, salzburg_border.geom)
--- WHERE ST_Within(s.the_geom, salzburg_border.geom);
--- 
--- -- Sidewalk-unique layers per city.
--- DROP TABLE IF EXISTS compare.graz_sidewalk_unique;
--- CREATE TABLE compare.graz_sidewalk_unique AS
--- WITH highway_footwayxfootway_sidewalk AS (
---      SELECT *
---      FROM graz_pgr
---      WHERE tags_h -> 'highway' IN ('footway')
---        AND tags_h -> 'footway' IN ('sidewalk')
--- ),
--- sidewalk AS (
---      SELECT *
---      FROM graz_pgr
---      WHERE tags_h ? 'sidewalk'
---        AND tags_h -> 'sidewalk' NOT IN ('no')
--- )
--- SELECT * FROM highway_footwayxfootway_sidewalk
--- UNION
--- SELECT * FROM sidewalk AS aa
--- WHERE aa.gid NOT IN (
---      SELECT aa.gid
---      FROM highway_footwayxfootway_sidewalk AS bb
---      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
---         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
--- );
--- 
--- DROP TABLE IF EXISTS compare.linz_sidewalk_unique;
--- CREATE TABLE compare.linz_sidewalk_unique AS
--- WITH highway_footwayxfootway_sidewalk AS (
---      SELECT *
---      FROM compare.linz_pgr
---      WHERE tags_h -> 'highway' IN ('footway')
---        AND tags_h -> 'footway' IN ('sidewalk')
--- ),
--- sidewalk AS (
---      SELECT *
---      FROM compare.linz_pgr
---      WHERE tags_h ? 'sidewalk'
---        AND tags_h -> 'sidewalk' NOT IN ('no')
--- )
--- SELECT * FROM highway_footwayxfootway_sidewalk
--- UNION
--- SELECT * FROM sidewalk AS aa
--- WHERE aa.gid NOT IN (
---      SELECT aa.gid
---      FROM highway_footwayxfootway_sidewalk AS bb
---      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
---         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
--- );
--- 
--- DROP TABLE IF EXISTS compare.salzburg_sidewalk_unique;
--- CREATE TABLE compare.salzburg_sidewalk_unique AS
--- WITH highway_footwayxfootway_sidewalk AS (
---      SELECT *
---      FROM compare.salzburg_pgr
---      WHERE tags_h -> 'highway' IN ('footway')
---        AND tags_h -> 'footway' IN ('sidewalk')
--- ),
--- sidewalk AS (
---      SELECT *
---      FROM compare.salzburg_pgr
---      WHERE tags_h ? 'sidewalk'
---        AND tags_h -> 'sidewalk' NOT IN ('no')
--- )
--- SELECT * FROM highway_footwayxfootway_sidewalk
--- UNION
--- SELECT * FROM sidewalk AS aa
--- WHERE aa.gid NOT IN (
---      SELECT aa.gid
---      FROM highway_footwayxfootway_sidewalk AS bb
---      WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
---         OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
--- );
--- 
--- -- 3km buffer network extracts (Graz center coordinates as provided).
--- DROP TABLE IF EXISTS compare.graz_pgr_3km;
--- CREATE TABLE compare.graz_pgr_3km AS
--- SELECT *
--- FROM graz_pgr
--- WHERE st_within(
---      st_transform(the_geom, 3857),
---      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
--- );
--- 
--- DROP TABLE IF EXISTS compare.linz_pgr_3km;
--- CREATE TABLE compare.linz_pgr_3km AS
--- SELECT *
--- FROM compare.linz_pgr
--- WHERE st_within(
---      st_transform(the_geom, 3857),
---      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
--- );
--- 
--- DROP TABLE IF EXISTS compare.salzburg_pgr_3km;
--- CREATE TABLE compare.salzburg_pgr_3km AS
--- SELECT *
--- FROM compare.salzburg_pgr
--- WHERE st_within(
---      st_transform(the_geom, 3857),
---      st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
--- );
--- 
--- -- Area summary per city border (km^2).
--- DROP TABLE IF EXISTS compare.city_area_km2;
--- CREATE TABLE compare.city_area_km2 AS
--- SELECT 'graz' AS city, st_area(graz_border.geom::geography) / 1000000 AS area_km2
--- UNION ALL
--- SELECT 'linz' AS city, st_area(linz_border.geom::geography) / 1000000 AS area_km2
--- UNION ALL
--- SELECT 'salzburg' AS city, st_area(salzburg_border.geom::geography) / 1000000 AS area_km2;
--- 
--- -- Summary counts and lengths for comparison outputs.
--- DROP TABLE IF EXISTS compare.summary_counts;
--- CREATE TABLE compare.summary_counts AS
--- SELECT 'total_edges_3km' AS metric,
---         (SELECT COUNT(*) FROM graz_pgr_3km) AS graz,
---         (SELECT COUNT(*) FROM compare.linz_pgr_3km) AS linz,
---         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km) AS salzburg
--- UNION ALL
--- SELECT 'footway_edges_3km' AS metric,
---         (SELECT COUNT(*) FROM graz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
---         (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
---         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h -> 'highway' IN ('footway'))
--- UNION ALL
--- SELECT 'sidewalk_edges_3km' AS metric,
---         (SELECT COUNT(*) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk'),
---         (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
---         (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
--- UNION ALL
--- SELECT 'sidewalk_length_m_3km' AS metric,
---         (SELECT SUM(length_m) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk'),
---         (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
---         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
--- UNION ALL
--- SELECT 'total_length_m_3km' AS metric,
---         (SELECT SUM(length_m) FROM graz_pgr_3km),
---         (SELECT SUM(length_m) FROM compare.linz_pgr_3km),
---         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km);
--- 
--- -- Sidewalk coverage percentage per city (sidewalk length / total length * 100).
--- DROP TABLE IF EXISTS compare.summary_percentages;
--- CREATE TABLE compare.summary_percentages AS
--- SELECT 'graz' AS city,
---         (SELECT SUM(length_m) FROM graz_pgr_3km WHERE tags_h ? 'sidewalk')
---         / NULLIF((SELECT SUM(length_m) FROM graz_pgr_3km), 0) * 100 AS sidewalk_pct
--- UNION ALL
--- SELECT 'linz' AS city,
---         (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk')
---         / NULLIF((SELECT SUM(length_m) FROM compare.linz_pgr_3km), 0) * 100 AS sidewalk_pct
--- UNION ALL
--- SELECT 'salzburg' AS city,
---         (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
---         / NULLIF((SELECT SUM(length_m) FROM compare.salzburg_pgr_3km), 0) * 100 AS sidewalk_pct;
+DROP TABLE IF EXISTS compare.salzburg_sidewalk_unique;
+CREATE TABLE compare.salzburg_sidewalk_unique AS
+WITH highway_footwayxfootway_sidewalk AS (
+     SELECT *
+     FROM compare.salzburg_pgr
+     WHERE tags_h -> 'highway' IN ('footway')
+       AND tags_h -> 'footway' IN ('sidewalk')
+),
+sidewalk AS (
+     SELECT *
+     FROM compare.salzburg_pgr
+     WHERE tags_h ? 'sidewalk'
+       AND tags_h -> 'sidewalk' NOT IN ('no')
+)
+SELECT * FROM highway_footwayxfootway_sidewalk
+UNION
+SELECT * FROM sidewalk AS aa
+WHERE aa.gid NOT IN (
+     SELECT aa.gid
+     FROM highway_footwayxfootway_sidewalk AS bb
+     WHERE st_dwithin(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857), 15)
+        OR ST_Intersects(st_transform(aa.the_geom, 3857), st_transform(bb.the_geom, 3857))
+);
+
+-- 3km buffer network extracts (Graz center coordinates as provided).
+DROP TABLE IF EXISTS compare.graz_pgr_3km;
+CREATE TABLE compare.graz_pgr_3km AS
+SELECT *
+FROM compare.graz_pgr
+WHERE st_within(
+     st_transform(the_geom, 3857),
+     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+);
+
+DROP TABLE IF EXISTS compare.linz_pgr_3km;
+CREATE TABLE compare.linz_pgr_3km AS
+SELECT *
+FROM compare.linz_pgr
+WHERE st_within(
+     st_transform(the_geom, 3857),
+     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+);
+
+DROP TABLE IF EXISTS compare.salzburg_pgr_3km;
+CREATE TABLE compare.salzburg_pgr_3km AS
+SELECT *
+FROM compare.salzburg_pgr
+WHERE st_within(
+     st_transform(the_geom, 3857),
+     st_buffer(st_transform(ST_SetSRID(st_point(15.438323, 47.072197), 4326), 3857), 3000, 'quad_segs=20')
+);
+
+-- Area summary per city border (km^2).
+DROP TABLE IF EXISTS compare.city_area_km2;
+CREATE TABLE compare.city_area_km2 AS
+SELECT 'graz' AS city, st_area(graz_border.geom::geography) / 1000000 AS area_km2
+UNION ALL
+SELECT 'linz' AS city, st_area(linz_border.geom::geography) / 1000000 AS area_km2
+UNION ALL
+SELECT 'salzburg' AS city, st_area(salzburg_border.geom::geography) / 1000000 AS area_km2;
+
+-- Summary counts and lengths for comparison outputs.
+DROP TABLE IF EXISTS compare.summary_counts;
+CREATE TABLE compare.summary_counts AS
+SELECT 'total_edges_3km' AS metric,
+        (SELECT COUNT(*) FROM compare.graz_pgr_3km) AS graz,
+        (SELECT COUNT(*) FROM compare.linz_pgr_3km) AS linz,
+        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km) AS salzburg
+UNION ALL
+SELECT 'footway_edges_3km' AS metric,
+        (SELECT COUNT(*) FROM compare.graz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
+        (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h -> 'highway' IN ('footway')),
+        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h -> 'highway' IN ('footway'))
+UNION ALL
+SELECT 'sidewalk_edges_3km' AS metric,
+        (SELECT COUNT(*) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk'),
+        (SELECT COUNT(*) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
+        (SELECT COUNT(*) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+UNION ALL
+SELECT 'sidewalk_length_m_3km' AS metric,
+        (SELECT SUM(length_m) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk'),
+        (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk'),
+        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+UNION ALL
+SELECT 'total_length_m_3km' AS metric,
+        (SELECT SUM(length_m) FROM compare.graz_pgr_3km),
+        (SELECT SUM(length_m) FROM compare.linz_pgr_3km),
+        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km);
+
+-- Sidewalk coverage percentage per city (sidewalk length / total length * 100).
+DROP TABLE IF EXISTS compare.summary_percentages;
+CREATE TABLE compare.summary_percentages AS
+SELECT 'graz' AS city,
+        (SELECT SUM(length_m) FROM compare.graz_pgr_3km WHERE tags_h ? 'sidewalk')
+        / NULLIF((SELECT SUM(length_m) FROM compare.graz_pgr_3km), 0) * 100 AS sidewalk_pct
+UNION ALL
+SELECT 'linz' AS city,
+        (SELECT SUM(length_m) FROM compare.linz_pgr_3km WHERE tags_h ? 'sidewalk')
+        / NULLIF((SELECT SUM(length_m) FROM compare.linz_pgr_3km), 0) * 100 AS sidewalk_pct
+UNION ALL
+SELECT 'salzburg' AS city,
+        (SELECT SUM(length_m) FROM compare.salzburg_pgr_3km WHERE tags_h ? 'sidewalk')
+        / NULLIF((SELECT SUM(length_m) FROM compare.salzburg_pgr_3km), 0) * 100 AS sidewalk_pct;
