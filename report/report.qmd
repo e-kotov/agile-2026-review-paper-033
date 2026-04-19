@@ -43,20 +43,17 @@ Majic I., Gegenleithner T., Scholz J. (2026). OpenStreetMap Suitability Analysis
 
 # Summary
 
-The reproduction study is currently limited to Graz-only pipeline, including database setup and analysis notebooks 01 to 03. Notebook 04 (City Comparison) is excluded from the initial review due to missing comparison assets for Linz and Salzburg in the current repository.
+Following the release of an updated dataset (v2), the reproduction study now covers the full pipeline, including database setup and all analysis notebooks (01 to 04).
 
-- **Result of the reproduction**: Some figures were reproduced.
-- **Main outcome**: Successful database initialization and execution of core analysis notebooks for Graz.
+- **Result of the reproduction**: All notebooks were executed.
+- **Main outcome**: Successful database initialization and execution of the complete analysis pipeline for Graz, Linz, and Salzburg.
 
 \clearpage
 
 # Reproducibility reviewer notes
 
 ## Scope
-The review covers the full recomputation of the main Graz pipeline as described in the paper's `README.md`. 
-
-The following items were explicitly marked as out of scope for the initial review:
-- `04_city_comparison.ipynb`: Excluded because the repository lacks the Linz comparison assets required by the workflow.
+The review covers the full recomputation of the pipeline as described in the paper's `README.md`, including the cross-city comparison.
 
 ## Technical Details {#sec-tech-details}
 Reproduction was performed using a single Apptainer/Docker container containing:
@@ -165,13 +162,7 @@ The reproduction study was conducted on a Scientific Compute Cluster (SCC) using
 
 During the reproduction study, the following issues were identified in the authors' reproducibility package:
 
-## 1. Missing Auxiliary Data (`innerenbezirke`) {#effort-1}
-The `setup.sql` script references a table named `innerenbezirke` to create a clipped visualization of the Graz street network. This dataset is not provided in the Figshare package. The reproduction script was patched to skip this non-essential visualization step.
-
-## 2. Missing Comparison OSM Data {#effort-2}
-While the paper compares Graz with Linz and Salzburg (Section 6), the OSM extracts for Linz and Salzburg are missing from the data package.
-
-## 3. Dependency Omission {#effort-3}
+## 1. Dependency Omission {#effort-1}
 The documentation omitted the `postgis` system package (required for `raster2pgsql`). Additionally, several Python dependencies required for analysis and visualization were missing from `requirements.txt`:
 - `mapclassify` (required for thematic mapping in `01_data_exploration.ipynb`)
 - `rtree` (required for spatial performance and spatial joins)
@@ -258,8 +249,6 @@ This work used the Scientific Compute Cluster at GWDG, the joint data center of 
 
 This section presents the results of the reproduction for each figure in the original paper. Reproduced images are set to a medium size (approximately half an A4 page). Figures with discrepancies are cross-referenced to the "Reproduction Efforts" section.
 
-Note: Figures 24-28 (City Comparison) were skipped due to missing auxiliary data for Linz and Salzburg.
-
 ## Data Exploration (Notebook 01)
 
 ### Figure 1
@@ -283,8 +272,15 @@ Note: Figures 24-28 (City Comparison) were skipped due to missing auxiliary data
 
 **Status**: Success.
 
-### Figure 5
-*Not reproducible (Conceptual diagram of sidewalk mapping approaches).*
+### Figure 5a: Sidewalk Mapping (Crossings)
+![](../repro/unique_sidewalk_py.png){width="70%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 5b: Sidewalk Mapping (Footway)
+![](../repro/mapping_approach_b.png){width="70%" fig-align="center"}
+
+**Status**: Success.
 
 ### Figure 6: Surface per road type
 ![](../repro/surface.png){width="70%" fig-align="center"}
@@ -299,14 +295,13 @@ Note: Figures 24-28 (City Comparison) were skipped due to missing auxiliary data
 ### Figure 8: Gradient Visualization
 ![](../repro/gradient_plot_py.png){width="70%" fig-align="center"}
 
-**Status**: **Issues**.
-**Reproduction Note**: The visualization lacks the "inner districts" clipping shown in the paper due to the missing `innerenbezirke` auxiliary dataset (see [point #1](#effort-1) in Reproduction Efforts).
+**Status**: Success.
 
 ### Figure 9a: Gradient Distribution (Boxplot)
 ![](../repro/slope_all_boxplot.png){width="70%" fig-align="center"}
 
 **Status**: **Issues**.
-**Reproduction Note**: Figure shows different range of values (median, IQR, etc.) compared to the figure in the original paper.
+**Reproduction Note**: Figure shows slightly different range of values  compared to the figure in the original paper. Specifically, the upper whisker in the reproduced plot is a bit over 8, while in the original plot it is at 8 or just below it.
 
 ### Figure 9b: Gradient Distribution (Histogram)
 ![](../repro/slope_all_heighdata.png){width="70%" fig-align="center"}
@@ -410,23 +405,48 @@ The following figures were generated by the notebooks but do not have a direct c
 
 **Status**: Success.
 
-### Unique Sidewalk Map
-![](../repro/unique_sidewalk_py.png){width="70%" fig-align="center"}
+
+\clearpage
+## Cross-City Comparison
+
+The following figures correspond to the city comparison section of the paper, contrasting the network characteristics of Graz, Linz, and Salzburg within a 1500m buffer from the city centers.
+
+### Figure 24: City Comparison - All streets
+![](../repro/comp_street_network.png){width="100%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 25: City Comparison - Sidewalk=*
+![](../repro/comp_sidewalk_any.png){width="100%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 26: City Comparison - Highway = Footway and Footway = Highway
+![](../repro/comp_highway_footway.png){width="100%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 27: City Comparison - Sidewalk unique
+![](../repro/comp_sidewalk_unique.png){width="100%" fig-align="center"}
+
+**Status**: Success.
+
+### Figure 28: City Comparison - Hexagon Map Sidewalk
+![](../repro/comp_steps.png){width="100%" fig-align="center"}
 
 **Status**: Success.
 
 \clearpage
 # Reproduced Tables
 
-The following tables were generated by the reproduction pipeline in `03_routing_analysis.ipynb` and correspond to the statistical summaries in the original paper. To update these tables from the executed notebook, run `python3 scripts/extract_tables.py` from the paper root directory.
+The following tables were generated by the reproduction pipeline in `03_fire_horse.ipynb` and `04_fire_horse.ipynb` and correspond to the statistical summaries in the original paper. To update these tables from the executed notebook, run `python3 scripts/extract_tables.py` from the paper root directory.
 
 **Note on Table Reproducibility**:
 - **Tables 1, 2, and 5**: Conceptual or summary tables not intended for computational reproduction.
 - **Tables 3, 4, 6, 7, 8, and 9**: Statistical or route summaries for which no reproduction code was provided in the authors' notebooks.
-- **Table 13**: City comparison summary that could not be reproduced due to missing data for Linz and Salzburg (see [point #2](#effort-2) in Reproduction Efforts).
-- **Tables 10, 11, and 12**: Successfully reproduced using the Experiment 3 benchmark set, with variations noted below.
+- **Tables 10, 11, 12, and 13**: Successfully reproduced using the Experiment 3 benchmark set and city comparison, with variations noted below.
 
-**Note on Table Values**: The percentages and counts in these tables are derived strictly from the set of 1000 routes generated during the Experiment 3 benchmark. Because the route selection is non-deterministic (see [point #8](#effort-8) in Reproduction Efforts), these values differ from the original paper, although they reflect the same general trends in network suitability.
+**Note on Table Values**: The percentages and counts in these tables are derived strictly from the set of 1000 routes generated during the Experiment 3 benchmark (or the full buffer for Table 13). Because the route selection is non-deterministic (see [point #8](#effort-8) in Reproduction Efforts), these values differ from the original paper, although they reflect the same general trends in network suitability.
 
 \subsection*{Table 10: Analysis of Surface Types for Three Distinct Network Categories}
 \input{../repro/table_10_surface.tex}
@@ -436,3 +456,6 @@ The following tables were generated by the reproduction pipeline in `03_routing_
 
 \subsection*{Table 12: Detailed Kerb Type Analysis for the Three Networks}
 \input{../repro/table_12_kerbs.tex}
+
+\subsection*{Table 13: Comparison of the Three Cities (Graz, Linz, Salzburg)}
+\input{../repro/table_13_city_comparison.tex}
