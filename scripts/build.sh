@@ -16,10 +16,8 @@ cd "$REVIEW_ROOT/containers"
 
 if command -v docker &> /dev/null; then
     echo "Docker detected. Building image 'paper-033'..."
-    # We build from the root of the paper files so Docker can COPY requirements.txt
-    # Actually, it's easier to build with the original paper-033 folder as context 
-    # since requirements.txt is already there in the repo.
-    docker build -t paper-033 -f Dockerfile ../../../paper-033/
+    cd "$REVIEW_ROOT"
+    docker build -t paper-033 -f containers/Dockerfile .
 elif command -v apptainer &> /dev/null; then
     if [ "$1" == "--local" ]; then
         echo "Apptainer detected. Building .sif from .def file locally..."
