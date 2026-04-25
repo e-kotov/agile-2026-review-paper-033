@@ -1,4 +1,4 @@
-FROM postgis/postgis:16-3.4
+FROM postgis/postgis:16-3.5-bookworm
 
 # Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,12 +20,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for Python package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Install specific Python version
+RUN uv python install 3.14.3
+
 # Set up work directory
 WORKDIR /work
 
 # Pre-install core requirements for Graz pipeline
-# Note: We install them globally in the container using uv
-RUN uv pip install --system --no-cache \
+# Use the installed Python 3.14.3 for the environment
+RUN uv pip install --system --python 3.14.3 --no-cache \
     sqlalchemy \
     psycopg2-binary \
     matplotlib \

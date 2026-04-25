@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: postgis/postgis:16-3.4
+From: postgis/postgis:16-3.5-bookworm
 
 %post
     export DEBIAN_FRONTEND=noninteractive
@@ -22,9 +22,12 @@ From: postgis/postgis:16-3.4
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="/root/.local/bin:$PATH"
 
+    # Install specific Python version
+    uv python install 3.14.3
+
     # Pre-install core requirements for Graz pipeline
     # Use uv for system-wide install inside container
-    uv pip install --system --no-cache \
+    uv pip install --system --python 3.14.3 --no-cache \
         sqlalchemy \
         psycopg2-binary \
         matplotlib \
