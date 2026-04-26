@@ -1,68 +1,92 @@
 Bootstrap: docker
-From: postgis/postgis:16-3.5-bookworm
+From: ghcr.io/osgeo/gdal:ubuntu-small-3.11.5
 
 %post
     export DEBIAN_FRONTEND=noninteractive
+    
+    # 1. Install basic dependencies for adding repos
     apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg2 \
+        lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+    # 2. Add PostgreSQL APT repository
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+    echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+
+    # 3. Install required system packages
+    apt-get update && apt-get install -y --no-install-recommends \
+        postgresql-16 \
+        postgresql-16-postgis-3 \
         postgresql-16-pgrouting \
+        postgis \
         osm2pgsql \
         osm2pgrouting \
-        postgresql-contrib \
-        postgis \
         python3-pip \
         python3-venv \
         python3-dev \
         libpq-dev \
-        gdal-bin \
-        curl \
-        ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-    # Install uv for Python package management
+    # 4. Install uv for Python package management
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="/root/.local/bin:$PATH"
 
-    # Install specific Python version
+    # 5. Install specific Python version
     uv python install 3.14.3
 
-    # Pre-install core requirements for Graz pipeline
-    # Use uv for system-wide install inside container
-    uv pip install --system --python 3.14.3 --no-cache \
-        sqlalchemy \
-        psycopg2-binary \
-        matplotlib \
-        pandas \
-        geopandas \
-        numpy \
-        seaborn \
-        shapely \
-        scipy \
-        wordcloud \
-        earthpy \
-        rasterio \
-        contextily \
-        mapclassify \
-        rtree \
-        pyogrio \
-        geoalchemy2 \
-        "setuptools<70.0.0" \
-        jupyter \
-        nbconvert
+    # 6. Set up virtual environment and install packages
+    uv venv /opt/venv --python 3.14.3
+    
+    # Temporarily export path to use the venv for installation
+    export PATH="/opt/venv/bin:$PATH"
+    
+    # We use a temporary requirements file since the build context isn't available here
+    # like in Docker. We'll write the specific versions directly.
+    cat <<EOF > /tmp/requirements.txt
+pandas==2.3.3
+geopandas==1.1.2
+SQLAlchemy==2.0.46
+psycopg2-binary==2.9.11
+matplotlib==3.10.8
+seaborn==0.13.2
+numpy==2.3.5
+scipy==1.16.3
+rasterio==1.5.0
+contextily==1.7.0
+shapely==2.1.2
+earthpy==0.9.4
+holoviews==1.22.1
+mapclassify==2.10.0
+wordcloud==1.9.6
+ipykernel==7.1.0
+jupyterlab==4.5.0
+geoalchemy2==0.17.1
+EOF
+    uv pip install --no-cache -r /tmp/requirements.txt
+    rm /tmp/requirements.txt
 
 %environment
+    export PATH="/opt/venv/bin:/usr/lib/postgresql/16/bin:$PATH"
+    export POSTGRES_PASSWORD=admin
+    export POSTGRES_DB=OSM
     export PGHOST=localhost
     export PGPORT=5432
     export PGUSER=postgres
-    export PGPASSWORD=admin
-    export PGDATABASE=OSM
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
 
 %runscript
-    # For Apptainer, we MUST start the database manually in-session
-    # because there is no background service manager.
-    /work/repro-reviews/paper-033/scripts/entrypoint.sh "$@"
+    # Start the database manually in-session for Apptainer
+    /work/scripts/entrypoint.sh "$@"
 
 %help
     Apptainer definition for paper-033 reproduction.
-    Synced with Dockerfile (PostgreSQL 16 + PostGIS + pgRouting + Python 3.12 stack).
+    Synchronized with Dockerfile (April 2026):
+    - GDAL 3.11.5 (OSGeo Base)
+    - PostgreSQL 16.13 (PGDG Repo)
+    - osm2pgsql 1.11.0
+    - osm2pgrouting 2.3.8
+    - Python 3.14.3
