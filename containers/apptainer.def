@@ -64,6 +64,7 @@ wordcloud==1.9.6
 ipykernel==7.1.0
 jupyterlab==4.5.0
 geoalchemy2==0.17.1
+setuptools<70.0.0
 EOF
     uv pip install --no-cache -r /tmp/requirements.txt
     rm /tmp/requirements.txt
