@@ -1,5 +1,5 @@
 === Reproducibility Patch Set for Paper 033 ===
-Generated on: Mon Mar  9 13:52:48 CET 2026
+Generated on: Wed Apr  1 12:59:00 CEST 2026
 ----------------------------------------------------------------------
 
 PATCH FOR: 02_route_profiles.ipynb
@@ -568,7 +568,7 @@ PATCH FOR: 01_data_exploration.ipynb
      "#ax.set_title('Slope Histogram All Streets', fontsize=14)\n",
      "ax.grid(True, which= 'both', axis='y', lw = .2)\n",
 -    "ax.set_xticks(np.arange(0, without_outliers_iqr.slope_dem.max() + 1, .5))\n",
-+    "ax.set_xticks(np.arange(0, without_outliers_iqr.slope_dem.max() + 1, 5.0))\n",
++    "ax.set_xticks(np.arange(0, without_outliers_iqr.slope_dem.max() + 1, 1.0))\n",
      "ax.set_xlabel('slope %')\n",
      "ax.set_ylabel('count')\n",
      "sns.despine()\n",

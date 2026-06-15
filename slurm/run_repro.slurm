@@ -52,8 +52,10 @@ fi
 export XDG_RUNTIME_DIR=""
 
 # Export Apptainer environment variables
-export APPTAINERENV_LC_ALL="en_US.UTF-8"
+export APPTAINERENV_LC_ALL="C.UTF-8"
+export APPTAINERENV_LANG="C.UTF-8"
 export APPTAINERENV_PGDATA="/work/repro-reviews/paper-033/pgdata"
+
 
 PATHS_TO_CHECK=(
     "/home" "/local" "/mnt" "/mnt/vast-orga" "/mnt/vast-standard" "/opt/misc" "/opt/slurm" 
@@ -110,6 +112,11 @@ done
 BIND="${BIND#,}"
 
 echo "Starting reproduction pipeline inside $CONTAINER_IMAGE on $(hostname)"
+
+# Patch notebooks on the host before running the container to ensure
+# figure saving and stability fixes are applied to fresh originals.
+echo "Applying notebook patches..."
+python3 scripts/patch_notebooks_safely.py
 
 "$CONTAINER_RUNTIME_BIN" run \
   --bind "$BIND" \

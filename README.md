@@ -1,4 +1,15 @@
-# Reproducibility Review: Paper-033
+# Reproduction of Paper 033: 
+
+
+Original paper citaiton:
+
+Majic, I., Gegenleithner, T., and Scholz, J.: OpenStreetMap Suitability Analysis for Wheelchair Routing, AGILE GIScience Ser., 7, 12, https://doi.org/10.5194/agile-giss-7-12-2026, 2026.
+
+Reproducibility report:
+
+
+Kotov, E. (2026). Reproducibility review of: OpenStreetMap Suitability Analysis for Wheelchair Routing. [https://doi.org/10.17605/OSF.IO/8c3vf](https://doi.org/10.17605/OSF.IO/8c3vf)
+
 
 This repository contains the reproducibility review for Paper 033: *OpenStreetMap Suitability Analysis for Wheelchair Routing*.
 
@@ -13,4 +24,23 @@ This repository contains the reproducibility review for Paper 033: *OpenStreetMa
 - \`slurm/\`: Job submission scripts for HPC clusters.
 
 ## Getting Started
-Please refer to the **Execution Steps** section in \`report/report.qmd\` for detailed instructions on reproducing the study.
+Please refer to the **Execution Steps** section in `report/report.qmd` for detailed instructions on reproducing the study.
+
+### Container Build and Distribution
+To build the container locally (requires Docker and root access):
+
+```bash
+# Build from the root of the paper-033 review folder
+docker build --platform linux/amd64 -t paper-033 -f containers/Dockerfile .
+
+# Tag and push to your registry
+docker tag paper-033 <your-registry>/agile-2026-paper-033:latest
+docker push <your-registry>/agile-2026-paper-033:latest
+```
+
+On the cluster (Apptainer), pull the pre-built image:
+
+```bash
+module load apptainer
+apptainer pull containers/paper_033.sif docker://<your-registry>/agile-2026-paper-033:latest
+```

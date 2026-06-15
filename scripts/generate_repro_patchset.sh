@@ -5,7 +5,7 @@
 # Paths relative to the script location
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REVIEW_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ORIGINAL_SOURCE="$REVIEW_ROOT/../../paper-033/AGILE2026_OSM_Wheelchair_Routing"
+ORIGINAL_SOURCE="$REVIEW_ROOT/repro_original"
 REPRO_DIR="$REVIEW_ROOT/repro"
 
 OUTPUT_FILE="$REVIEW_ROOT/repro_patches.diff"

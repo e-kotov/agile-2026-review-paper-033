@@ -5,14 +5,20 @@ import sys
 import zipfile
 import shutil
 
-def download_figshare(article_id, target_dir):
+def download_figshare(article_id, target_dir, version=None):
     base_url = "https://api.figshare.com/v2"
     print(f"--- Figshare Downloader ---")
     print(f"Article ID: {article_id}")
+    if version:
+        print(f"Version: {version}")
     print(f"Target Dir: {target_dir}")
 
     # 1. Get file list
-    api_url = f"{base_url}/articles/{article_id}/files"
+    if version:
+        api_url = f"{base_url}/articles/{article_id}/versions/{version}/files?page_size=100"
+    else:
+        api_url = f"{base_url}/articles/{article_id}/files?page_size=100"
+
     try:
         with urllib.request.urlopen(api_url) as response:
             files = json.loads(response.read().decode())
@@ -52,6 +58,8 @@ def download_figshare(article_id, target_dir):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python3 download_and_prep.py <article_id> <target_dir>")
+        print("Usage: python3 download_and_prep.py <article_id> <target_dir> [version]")
         sys.exit(1)
-    download_figshare(sys.argv[1], sys.argv[2])
+    
+    version = sys.argv[3] if len(sys.argv) > 3 else None
+    download_figshare(sys.argv[1], sys.argv[2], version)
