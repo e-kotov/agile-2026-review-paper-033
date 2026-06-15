@@ -1,4 +1,15 @@
-# Reproducibility Review: Paper-033
+# Reproduction of Paper 033: 
+
+
+Original paper citaiton:
+
+Majic, I., Gegenleithner, T., and Scholz, J.: OpenStreetMap Suitability Analysis for Wheelchair Routing, AGILE GIScience Ser., 7, 12, https://doi.org/10.5194/agile-giss-7-12-2026, 2026.
+
+Reproducibility report:
+
+
+Kotov, E. (2026). Reproducibility review of: OpenStreetMap Suitability Analysis for Wheelchair Routing. [https://doi.org/10.17605/OSF.IO/8c3vf](https://doi.org/10.17605/OSF.IO/8c3vf)
+
 
 This repository contains the reproducibility review for Paper 033: *OpenStreetMap Suitability Analysis for Wheelchair Routing*.
 
