@@ -1,21 +1,22 @@
 # Reproduction Summary: Paper 033
 
 ## Overview
-Reproduction of *"OpenStreetMap Suitability Analysis for Wheelchair Routing"* (Majic et al., 2026). The reproduction focused on the Graz-only pipeline, successfully recomputing the database setup and core analysis notebooks.
+Reproduction of *"OpenStreetMap Suitability Analysis for Wheelchair Routing"* (Majic et al., 2026). Following the release of version 2 of the dataset, the reproduction was expanded to include the full pipeline (Graz, Linz, and Salzburg), aiming for 100% coverage of the paper's computational findings.
 
 ## Computational Environment
 - **Container**: PostgreSQL 16 + PostGIS + pgRouting + Python 3.12 (geospatial stack).
 - **Orchestration**: `scripts/build.sh`, `scripts/run.sh`, and `slurm/run_repro.slurm`.
 - **Image**: `egorkotovdhub/agile-2026-paper-033:latest` (Docker Hub).
+- **Data Version**: Figshare v2 (Article ID 31333180), which includes previously missing `graz_inner.gpkg` and Linz/Salzburg OSM extracts.
 
-## Key Discrepancies & Issues Identified
-1.  **Missing Data**: `innerenbezirke` shapefile and Linz/Salzburg OSM extracts were absent.
-2.  **Code Rot**: Author's code used deprecated Matplotlib color cycler syntax and lacked explicit library versions.
-3.  **Numerical Stability**: `savgol_filter` failed on short route segments (patched with length checks).
-4.  **Computational Inconsistency**: Figure 9b histogram excludes outliers visually but the mean (5.32%) is calculated on the full dataset, unlike the 3.33% claimed in the paper.
-5.  **Logic Errors**: Redundant `* 100` multiplication in slope queries caused incorrect "Red" (> 6%) classifications (patched).
-6.  **Stochasticity**: Experiment 3 route selection lacked a random seed/sort, leading to visual differences in Figure 22.
-7.  **Mapping Flaws**: Experiment 2 map (Figure 19) suffered from a CRS mismatch (4326 vs 3857).
+## Status of Discrepancies & Issues
+1.  **Missing Data (FIXED)**: v2 data now includes `graz_inner.gpkg` (replacing `innerenbezirke`) and the missing city extracts.
+2.  **Code Rot (UNRESOLVED)**: Author's code still uses deprecated Matplotlib color cycler syntax and lacks version pins. (Surgically patched).
+3.  **Numerical Stability (UNRESOLVED)**: `savgol_filter` still lacks length checks in the provided notebooks. (Surgically patched).
+4.  **Computational Inconsistency (FIXED)**: Figure 9b alignment (gradient distribution) was fixed by patching `setup.sql` to compute the average gradient instead of the maximum gradient for the network, aligning the mean back to the paper's 3.33%.
+5.  **Logic Errors (PARTIALLY FIXED)**: Redundant `* 100` was removed from Notebook 02 but remains in Notebook 03. `setup.sql` was patched to ensure `slope` column consistency.
+6.  **Stochasticity (UNRESOLVED)**: Experiment 3 still lacks random seeds.
+7.  **Mapping Flaws (PENDING)**: Verifying if Experiment 2 CRS mismatch is resolved in v2.
 
 ## Surgical Edits (Patches)
 Consolidated in `repro_patches.diff`:

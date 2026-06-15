@@ -16,8 +16,9 @@ if [ ! -d "$PGDATA/base" ]; then
     initdb -D "$PGDATA" --username="$PGUSER" --pwfile=<(echo "$PGPASSWORD") --auth=scram-sha-256
     
     # Configure Postgres to allow local connections without password for ease of reproduction
+    echo "local all all trust" > "$PGDATA/pg_hba.conf"
     echo "host all all 127.0.0.1/32 trust" >> "$PGDATA/pg_hba.conf"
-    echo "local all all trust" >> "$PGDATA/pg_hba.conf"
+    echo "host all all ::1/128 trust" >> "$PGDATA/pg_hba.conf"
     echo "listen_addresses = '127.0.0.1'" >> "$PGDATA/postgresql.conf"
     echo "port = $PGPORT" >> "$PGDATA/postgresql.conf"
     echo "unix_socket_directories = '/tmp'" >> "$PGDATA/postgresql.conf"

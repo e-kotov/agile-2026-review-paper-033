@@ -1,6 +1,7 @@
 # Management files
 logs/
-pgdata/
+pgdata*/
+repro_v1_backup/
 *.sif
 *.tar.gz
 *.zip
@@ -12,6 +13,14 @@ repro/.venv/
 repro/.ipynb_checkpoints/
 repro/executed_*.ipynb
 repro/*.png
+repro/table_*.tex
+repro/setup_complete.lock
+repro/*.gpkg
+repro/*.tif*
+repro/graz_3
+repro/linz
+repro/salzburg
+repro/*.ttf
 
 # IDE junk
 .DS_Store
